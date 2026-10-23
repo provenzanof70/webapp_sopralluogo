@@ -12,6 +12,7 @@ import { VistaVerbale } from './verbale';
 import { VistaEsporta } from './esporta';
 import { impostazione } from '../archivio/db';
 import { db } from '../archivio/db';
+import { chiediEliminazione, chiediRipartenza } from './home';
 import { isoLocale, soloOra, dataIt, numIt } from '../util/base';
 import { indiceElementi } from '../dominio/stato';
 
@@ -298,6 +299,13 @@ function Altro({ ses }: { ses: Sessione }) {
       {voce('integrita', 'Verifica di integrità', 'Controlla registro e impronte sul dispositivo')}
     </div>
     {pdf && <a class="btn larga" href={pdf} target="_blank" rel="noopener">Apri il PDF di campo</a>}
+    <div class="card"><h3>Gestione del sopralluogo</h3>
+      <p class="piccolo tenue">Ricominciare crea un sopralluogo vuoto dallo stesso ZIP di andata, senza riscegliere il file. Eliminare cancella questo sopralluogo dal dispositivo.</p>
+      <div class="gruppo-btn">
+        <button class="btn pic" onClick={async () => { const n = await chiediRipartenza(ses.istanza); if (n) vai('s', n); }}>Ricomincia da zero</button>
+        <button class="btn pic per" onClick={async () => { if (await chiediEliminazione(ses.istanza)) vai(''); }}>Elimina questo sopralluogo</button>
+      </div>
+    </div>
     {(ses.struttura.dopoSopralluogo ?? []).length > 0 && <div class="card"><h3>Dopo il sopralluogo</h3><ul>{ses.struttura.dopoSopralluogo!.map((d) => <li>{d.testo}{d.entro ? <small class="tenue"> — {d.entro}</small> : null}</li>)}</ul></div>}
   </>;
 }

@@ -24,6 +24,11 @@
 - **Chiudi l'area** a fine giro: se restano voci A aperte serve un motivo (deroga).
 - Niente si cancella: «Annulla» lascia l'evidenza nel pacchetto con il motivo.
 
+## Ricominciare o eliminare
+- **Ricomincia da zero** (nell'elenco iniziale o in Altro → Gestione del sopralluogo): crea un sopralluogo vuoto dallo stesso ZIP di andata, senza riscegliere il file; puoi tenere o eliminare quello vecchio.
+- **Elimina**: cancella il sopralluogo dal dispositivo, dopo aver scritto il codice pratica. Se ci sono dati non esportati l'app lo dice chiaramente prima.
+- Per caricare una **nuova revisione** dello ZIP: «Importa pacchetto di andata» crea un nuovo sopralluogo; poi elimina quello vecchio se non serve.
+
 ## Salvataggi
 - Il contatore **⇪** in alto mostra le modifiche non esportate; diventa arancione dopo 45 minuti.
 - **Esporta → Checkpoint**: salva su OneDrive solo le novità. Conferma «Sì, salvato» solo se il file è davvero salvato.

@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import { db, impostazione, salvaImpostazione, type RecIstanza } from '../archivio/db';
 import { analizzaAndata, creaSopralluogo, ErroreImport, type AnalisiAndata } from '../pacchetti/andata';
 import { analizzaRipristino, eseguiRipristino, type AnalisiRipristino } from '../pacchetti/ripristino';
-import { vai, prova, conferma, chiedi, messaggio, avvisa, Card, chiudiSessione } from './comuni';
+import { vai, prova, conferma, chiedi, avvisa, Card, chiudiSessione } from './comuni';
 import { dataIt, dataOra, sha256 } from '../util/base';
 import { VERSIONE_APP } from '../pacchetti/rientro';
 import { contaModificheNonEsportate } from '../dominio/completezza';
+import { situazione, eliminaSopralluogo, ripartiDaAndata } from '../archivio/gestione';
 
 function useIstanze() {
   const [l, setL] = useState<(RecIstanza & { nonEsp: number })[] | null>(null);
@@ -70,7 +71,8 @@ export function Home() {
             <div class="piccolo">{i.nonEsp ? <span style="color:var(--avviso)">{i.nonEsp} modifiche non esportate</span> : <span class="tenue">tutto esportato</span>}{i.archiviata ? ' · archiviato' : ''}</div>
           </a>
           <div class="riga" style="margin-top:6px;justify-content:flex-end">
-            <button class="btn pic per" onClick={() => elimina(i, ricarica)}>Elimina dal dispositivo</button>
+            <button class="btn pic" onClick={async () => { const n = await chiediRipartenza(i); if (n) vai('s', n); }}>Ricomincia da zero</button>
+            <button class="btn pic per" onClick={async () => { if (await chiediEliminazione(i)) ricarica(); }}>Elimina</button>
           </div>
         </div>)}</div>
       )}
@@ -79,22 +81,46 @@ export function Home() {
   </div>;
 }
 
-async function elimina(i: RecIstanza & { nonEsp: number }, ricarica: () => void) {
-  const s = await db().stati.get(i.id);
-  const finale = s?.stato.checkpoint.esportati.some((x) => x.tipo === 'finale') && i.nonEsp === 0;
-  if (!finale) {
-    await messaggio('Non eliminabile', 'Si può eliminare solo un sopralluogo chiuso, esportato con il pacchetto finale e senza modifiche successive non esportate.');
-    return;
+export async function chiediEliminazione(i: RecIstanza): Promise<boolean> {
+  const s = await situazione(i.id);
+  const perdite: string[] = [];
+  if (s.nonEsportate) perdite.push(`${s.nonEsportate} modifiche non esportate`);
+  if (s.evidenzeNonEsportate) perdite.push(`${s.evidenzeNonEsportate} foto/file non esportati`);
+  const rischio = perdite.length > 0 && s.avviato;
+  const testo = rischio
+    ? `ATTENZIONE: su questo dispositivo ci sono ${perdite.join(' e ')}. Se elimini, quel lavoro è perso per sempre (resta solo ciò che hai già salvato con i checkpoint).\n\nSe vuoi tenerlo, annulla e fai prima Esporta → Checkpoint.`
+    : s.finaleEsportato
+      ? 'Il pacchetto finale è stato esportato e confermato. Il sopralluogo sparisce da questo dispositivo; resta ciò che hai salvato.'
+      : 'Il sopralluogo sparisce da questo dispositivo. Lo ZIP di andata resta dove l\'hai salvato e puoi reimportarlo quando vuoi.';
+  const r = await chiedi(rischio ? 'Eliminare e perdere i dati?' : 'Elimina dal dispositivo',
+    [{ id: 'c', etichetta: `Per confermare scrivi il codice pratica «${i.codicePratica}»`, obbligatorio: true }],
+    { testo: testo + '\n\nOperazione irreversibile.', ok: 'Elimina definitivamente' });
+  if (!r) return false;
+  if (r.c.trim() !== i.codicePratica) { avvisa('Codice non corrispondente: nulla eliminato', true); return false; }
+  const ok = await prova(async () => { await eliminaSopralluogo(i.id); return true; }, 'Sopralluogo eliminato dal dispositivo');
+  if (ok) chiudiSessione();
+  return ok === true;
+}
+
+export async function chiediRipartenza(i: RecIstanza): Promise<string | null> {
+  const s = await situazione(i.id);
+  const scelta = await chiedi('Ricomincia dallo ZIP di andata', [{
+    id: 'v', etichetta: 'Il sopralluogo attuale', tipo: 'scelta',
+    scelte: ['Tienilo (crea un secondo sopralluogo vuoto)', 'Eliminalo dopo aver creato quello nuovo'],
+    valore: 'Tienilo (crea un secondo sopralluogo vuoto)',
+  }], {
+    testo: `Si crea un nuovo sopralluogo vuoto dalla stessa struttura (${i.revisione}), con figure e PDF di campo. Non serve riscegliere il file.`
+      + (s.avviato && (s.nonEsportate || s.evidenzeNonEsportate) ? `\n\nAttenzione: l'attuale ha ${s.nonEsportate} modifiche e ${s.evidenzeNonEsportate} file non esportati.` : ''),
+    ok: 'Ricomincia',
+  });
+  if (!scelta) return null;
+  const nuovo = await prova(() => ripartiDaAndata(i.id), 'Nuovo sopralluogo creato');
+  if (!nuovo) return null;
+  if (scelta.v.startsWith('Eliminalo')) {
+    const eliminato = await chiediEliminazione(i);
+    if (!eliminato) avvisa('Il sopralluogo precedente è stato mantenuto');
   }
-  const r = await chiedi('Elimina dal dispositivo', [{ id: 'c', etichetta: `Per confermare scrivi il codice pratica «${i.codicePratica}»`, obbligatorio: true }],
-    { testo: 'Il sopralluogo sparisce da questo dispositivo. Resta solo ciò che hai salvato su OneDrive (pacchetto finale). Operazione irreversibile.', ok: 'Elimina' });
-  if (!r || r.c.trim() !== i.codicePratica) { if (r) avvisa('Codice non corrispondente: nulla eliminato', true); return; }
-  const d = db();
-  await prova(() => d.transaction('rw', [d.istanze, d.strutture, d.figure, d.campo, d.eventi, d.stati, d.blob, d.miniature], async () => {
-    for (const t of [d.figure, d.eventi, d.blob, d.miniature]) await (t as typeof d.blob).where('istanza').equals(i.id).delete();
-    await d.strutture.delete(i.id); await d.campo.delete(i.id); await d.stati.delete(i.id); await d.istanze.delete(i.id);
-  }), 'Eliminato dal dispositivo');
-  ricarica();
+  return nuovo;
 }
 
 function StatoDispositivo() {
