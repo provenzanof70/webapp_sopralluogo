@@ -156,7 +156,8 @@ function Adesso({ ses }: { ses: Sessione }) {
   const fascia = (s.programma ?? []).find((f) => f.dalle <= hm && (!f.alle || hm < f.alle)) ?? (s.programma ?? []).filter((f) => f.dalle <= hm).at(-1);
   const prossima = (s.programma ?? []).find((f) => f.dalle > hm);
   const passi: { proto: string; area: string; id: string; prev: string; manovra: string }[] = [];
-  for (const el of s.elementi) if (el.tipo === 'protocollo') for (const p of el.passi) {
+  const oggi = isoLocale(ora).slice(0, 10) === s.pratica.data;
+  for (const el of s.elementi) if (el.tipo === 'protocollo' && !el.daLasciareAlCliente) for (const p of el.passi) {
     const pe = ses.stato.esiti[el.id]?.passi?.[p.id];
     if ((!pe || pe.stato === 'daFare') && p.orarioPrevisto) passi.push({ proto: el.id, area: el.area, id: p.id, prev: p.orarioPrevisto, manovra: p.manovra });
   }
@@ -179,9 +180,9 @@ function Adesso({ ses }: { ses: Sessione }) {
       {passi.slice(0, 3).map((p) => {
         const d = minuti(p.prev) - adesso;
         return <a class="voce-lista" href={`#/s/${ses.istanza.id}/a/${p.area}/${p.proto}`} style="color:inherit;text-decoration:none">
-          <b style={`min-width:56px;color:${d <= 0 ? 'var(--errore)' : d <= 5 ? 'var(--avviso)' : 'inherit'}`}>{p.prev}</b>
+          <b style={`min-width:56px;color:${!oggi ? 'inherit' : d <= 0 ? 'var(--errore)' : d <= 5 ? 'var(--avviso)' : 'inherit'}`}>{p.prev}</b>
           <span class="cresce"><code>{p.id}</code> {p.manovra}</span>
-          <span class="piccolo">{d > 0 ? `tra ${d}′` : d === 0 ? 'ORA' : `${-d}′ fa`}</span>
+          <span class="piccolo">{!oggi ? '' : d > 0 ? `tra ${d}′` : d === 0 ? 'ORA' : `${-d}′ fa`}</span>
         </a>;
       })}
       {'wakeLock' in navigator && <button class="btn pic" style="margin-top:8px" onClick={async () => {
