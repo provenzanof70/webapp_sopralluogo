@@ -1,6 +1,6 @@
 // Radice dell'app: instradamento, blocco con PIN, politica di aggiornamento.
 import { useEffect, useState } from 'preact/hooks';
-import { useHash, OspiteModale, OspiteToast, avvisa } from './comuni';
+import { useHash, OspiteModale, OspiteToast, avvisa, conferma } from './comuni';
 import { Home, Impostazioni, Informazioni, applicaTema } from './home';
 import { Sopralluogo } from './sopralluogo';
 import { impostazione, db } from '../archivio/db';
@@ -43,8 +43,13 @@ function BannerAggiornamento({ applica }: { applica: () => void }) {
   useEffect(() => { db().istanze.toArray().then((l) => setInCorso(l.some((i) => i.statoSopralluogo === 'inCorso'))); }, []);
   if (inCorso === null) return null;
   return <div class="avviso" style="margin:0;border-radius:0">
-    {inCorso ? 'Aggiornamento dell\'app disponibile: verrà installato quando non ci sono sopralluoghi in corso (chiudili o esportali prima).'
-      : <>Aggiornamento dell'app disponibile. <button class="btn pic pri" onClick={applica}>Aggiorna ora</button></>}
+    Aggiornamento dell'app disponibile.{' '}
+    <button class="btn pic pri" onClick={async () => {
+      if (inCorso && !(await conferma('Sopralluogo in corso', 'I dati restano sul dispositivo: l\'aggiornamento cambia solo il programma. Consigliato fare prima un checkpoint. Aggiornare ora?', { ok: 'Aggiorna ora' }))) return;
+      avvisa('Aggiornamento in corso…');
+      applica();
+      setTimeout(() => location.reload(), 4000);
+    }}>Aggiorna ora</button>
   </div>;
 }
 

@@ -5,7 +5,7 @@ import { analizzaAndata, creaSopralluogo, ErroreImport, type AnalisiAndata } fro
 import { analizzaRipristino, eseguiRipristino, type AnalisiRipristino } from '../pacchetti/ripristino';
 import { vai, prova, conferma, chiedi, avvisa, Card, chiudiSessione } from './comuni';
 import { dataIt, dataOra, sha256 } from '../util/base';
-import { VERSIONE_APP } from '../pacchetti/rientro';
+import { VERSIONE_APP, BUILD_APP } from '../pacchetti/rientro';
 import { contaModificheNonEsportate } from '../dominio/completezza';
 import { situazione, eliminaSopralluogo, ripartiDaAndata } from '../archivio/gestione';
 
@@ -51,7 +51,7 @@ export function Home() {
   if (rip) return <AnteprimaRipristino a={rip} onAnnulla={() => setRip(null)} />;
 
   return <div class="app">
-    <div class="barra"><div class="tit"><b>Sopralluogo MC Studio</b><small>v{VERSIONE_APP}</small></div><button onClick={() => vai('impostazioni')}>⚙</button></div>
+    <div class="barra"><div class="tit"><b>Sopralluogo MC Studio</b><small>v{VERSIONE_APP} · build {BUILD_APP} UTC</small></div><button onClick={() => vai('impostazioni')}>⚙</button></div>
     <div class="contenuto">
       <StatoDispositivo />
       <input ref={inImp} type="file" accept=".zip,.json,application/zip,application/json" class="nascosto" onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (f) importa(f); }} />
@@ -229,6 +229,13 @@ export function Impostazioni() {
           {!!v.pinHash && <button class="btn pic" onClick={() => set('pinHash', '')}>Disattiva PIN</button>}
           <select style="width:auto" value={String(v.pinMinuti)} onChange={(e) => set('pinMinuti', Number(e.currentTarget.value))}>{[1, 5, 15, 30].map((n) => <option value={n}>blocco dopo {n} min</option>)}</select>
         </div>
+      </Card>
+      <Card titolo="Aggiornamenti">
+        <p class="piccolo">Versione installata: <b>{VERSIONE_APP}</b> · build {BUILD_APP} UTC</p>
+        <button class="btn pic" onClick={async () => {
+          await (window as unknown as { cercaAggiornamenti?: () => Promise<void> }).cercaAggiornamenti?.();
+          avvisa('Controllo eseguito: se c\'è una versione nuova compare il pulsante «Aggiorna ora» in alto');
+        }}>Cerca aggiornamenti</button>
       </Card>
       <a class="btn larga" href="#/informazioni">Informazioni e privacy</a>
     </div></div>;
