@@ -1,0 +1,6 @@
+tests/uscita/
+node_modules/
+dist/
+*.local
+/dati/
+/pratiche/

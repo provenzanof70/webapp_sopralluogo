@@ -1,0 +1,387 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "pacchetto-rientro.v1.schema.json",
+  "title": "Manifest del pacchetto di rientro dall'app di sopralluogo — v1",
+  "description": "File manifest.json alla radice dello ZIP di rientro. Descrive esiti di campo ed evidenze acquisite. I file delle evidenze sono byte-identici a quelli acquisiti; ogni file è elencato in hash.sha256.",
+  "type": "object",
+  "required": ["formato", "versioneSchema", "tipoPacchetto", "volume", "struttura", "idSopralluogoLocale", "app", "creatoIl", "fusoOrario", "stato", "eventi", "esiti", "evidenze"],
+  "additionalProperties": false,
+  "properties": {
+    "formato": { "const": "mcstudio.sopralluogo.rientro" },
+    "versioneSchema": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "tipoPacchetto": {
+      "enum": ["checkpoint", "finale"],
+      "description": "checkpoint = incrementale (evidenze nuove dall'ultimo checkpoint + stato e registro completi); finale = completo e sigillato"
+    },
+    "volume": {
+      "type": "object", "required": ["numero", "totale"], "additionalProperties": false,
+      "properties": { "numero": { "type": "integer", "minimum": 1 }, "totale": { "type": "integer", "minimum": 1 } }
+    },
+    "struttura": {
+      "type": "object",
+      "required": ["idStruttura", "sha256", "revisione", "codicePratica", "versioneSchema"],
+      "additionalProperties": false,
+      "properties": {
+        "idStruttura": { "type": "string", "format": "uuid" },
+        "sha256": { "$ref": "#/$defs/sha256", "description": "SHA-256 di struttura.json così come importato" },
+        "revisione": { "type": "string" },
+        "codicePratica": { "type": "string" },
+        "prefissoFile": { "type": "string" },
+        "versioneSchema": { "type": "string" }
+      }
+    },
+    "idSopralluogoLocale": { "type": "string", "format": "uuid", "description": "Identifica l'istanza sul dispositivo; una copia ripristinata ha un id nuovo" },
+    "app": {
+      "type": "object", "required": ["versione"], "additionalProperties": false,
+      "properties": {
+        "versione": { "type": "string" },
+        "piattaforma": { "type": "string" },
+        "userAgent": { "type": "string" },
+        "installata": { "type": "boolean", "description": "true se avviata da icona (display-mode standalone)" },
+        "storagePersistente": { "type": "boolean" }
+      }
+    },
+    "creatoIl": { "type": "string", "format": "date-time" },
+    "fusoOrario": { "type": "string", "description": "IANA, es. Europe/Rome" },
+    "stato": {
+      "type": "object", "required": ["statoSopralluogo"], "additionalProperties": false,
+      "properties": {
+        "statoSopralluogo": { "enum": ["preparazione", "inCorso", "chiuso"] },
+        "avviatoIl": { "type": "string", "format": "date-time" },
+        "chiusoIl": { "type": "string", "format": "date-time" }
+      }
+    },
+    "eventi": {
+      "type": "object", "required": ["file", "daSeq", "aSeq", "hashFinale"], "additionalProperties": false,
+      "properties": {
+        "file": { "const": "eventi.jsonl" },
+        "daSeq": { "type": "integer", "minimum": 1 },
+        "aSeq": { "type": "integer", "minimum": 1 },
+        "hashFinale": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "checkpointPrecedente": {
+      "type": "object", "additionalProperties": false, "required": ["creatoIl", "aSeq", "hashFinale"],
+      "properties": {
+        "creatoIl": { "type": "string", "format": "date-time" },
+        "aSeq": { "type": "integer" },
+        "hashFinale": { "$ref": "#/$defs/sha256" },
+        "nomeFile": { "type": "string" }
+      }
+    },
+    "presenti": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["nome"], "additionalProperties": false,
+        "properties": {
+          "persona": { "type": "string", "description": "id della struttura; assente per persone aggiunte in campo" },
+          "nome": { "type": "string" },
+          "ruolo": { "type": "string" },
+          "societa": { "type": "string" },
+          "telefono": { "type": "string" },
+          "dalle": { "type": "string" },
+          "alle": { "type": "string" },
+          "aggiuntaInCampo": { "type": "boolean" }
+        }
+      }
+    },
+    "consensi": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "foto": { "enum": ["si", "no", "conLimiti"] },
+        "fotoLimiti": { "type": "string" },
+        "registrazioneAudio": { "enum": ["si", "no"] },
+        "registratoIl": { "type": "string", "format": "date-time" }
+      }
+    },
+    "esiti": {
+      "type": "object",
+      "description": "Chiave = codice dell'elemento della struttura (o di una riga aggiunta). Solo gli elementi toccati in campo.",
+      "additionalProperties": { "$ref": "#/$defs/esito" }
+    },
+    "obiettivi": {
+      "type": "object",
+      "description": "Chiave = codice obiettivo O*. Stato calcolato dall'app + nota del tecnico.",
+      "additionalProperties": {
+        "type": "object", "additionalProperties": false, "required": ["stato"],
+        "properties": { "stato": { "enum": ["completo", "parziale", "aperto"] }, "nota": { "type": "string" } }
+      }
+    },
+    "evidenze": { "type": "array", "items": { "$ref": "#/$defs/evidenza" } },
+    "deroghe": {
+      "type": "array",
+      "description": "Voci di priorità A non completate, con motivo, accettate alla chiusura di un'area o del sopralluogo",
+      "items": {
+        "type": "object", "required": ["codice", "motivo", "il"], "additionalProperties": false,
+        "properties": { "codice": { "type": "string" }, "motivo": { "type": "string", "minLength": 1 }, "il": { "type": "string", "format": "date-time" } }
+      }
+    },
+    "verbale": {
+      "type": "object", "additionalProperties": false,
+      "properties": {
+        "campi": { "type": "object", "additionalProperties": { "type": "string" } },
+        "puntiAperti": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["testo"], "additionalProperties": false,
+            "properties": { "testo": { "type": "string" }, "responsabile": { "type": "string" }, "entro": { "type": "string" } }
+          }
+        },
+        "areeNonAccessibili": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["area", "motivo"], "additionalProperties": false,
+            "properties": { "area": { "type": "string" }, "motivo": { "type": "string" } }
+          }
+        },
+        "firme": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["id", "ruolo", "nome", "evidenza", "il"], "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string" },
+              "ruolo": { "type": "string" },
+              "nome": { "type": "string" },
+              "evidenza": { "type": "string", "format": "uuid" },
+              "il": { "type": "string", "format": "date-time" },
+              "sha256ContenutoFirmato": { "$ref": "#/$defs/sha256", "description": "Hash del testo del verbale mostrato al momento della firma" }
+            }
+          }
+        },
+        "pdf": { "type": "string", "description": "Percorso nel pacchetto, es. report/verbale.pdf" }
+      }
+    },
+    "report": {
+      "type": "array",
+      "items": {
+        "type": "object", "required": ["file", "tipo", "sha256"], "additionalProperties": false,
+        "properties": {
+          "file": { "type": "string" },
+          "tipo": { "enum": ["verbale", "reportDettagliato", "reportSintetico", "fascicoloFotografico", "tabellaCsv", "figuraAnnotata"] },
+          "sha256": { "$ref": "#/$defs/sha256" },
+          "elemento": { "type": "string" }
+        }
+      }
+    }
+  },
+
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "uuid": { "type": "string", "format": "uuid" },
+    "listaEvidenze": { "type": "array", "items": { "$ref": "#/$defs/uuid" }, "uniqueItems": true },
+
+    "evidenza": {
+      "type": "object",
+      "required": ["id", "tipo", "acquisitaIl", "progressivo", "elementi"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/uuid" },
+        "tipo": { "enum": ["foto", "audio", "documento", "firma", "annotazione", "nota"] },
+        "file": { "type": "string", "pattern": "^evidenze/(foto|audio|documenti|firme|annotazioni)/[A-Za-z0-9._-]+$" },
+        "testo": { "type": "string", "description": "Solo per tipo nota" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "byte": { "type": "integer", "minimum": 0 },
+        "mime": { "type": "string" },
+        "nomeOriginale": { "type": "string" },
+        "fonte": { "enum": ["fotocamera", "galleria", "file", "microfono", "schermo", "tastiera"] },
+        "acquisitaIl": { "type": "string", "format": "date-time" },
+        "dataOriginaleExif": { "type": "string" },
+        "progressivo": { "type": "integer", "minimum": 1, "description": "Numerazione unica del sopralluogo per tipo" },
+        "elementi": { "type": "array", "items": { "type": "string" }, "description": "Codici collegati; vuoto = in INBOX da assegnare" },
+        "area": { "type": "string" },
+        "didascalia": { "type": "string" },
+        "gps": {
+          "type": "object", "additionalProperties": false, "required": ["lat", "lon", "fonte"],
+          "properties": { "lat": { "type": "number" }, "lon": { "type": "number" }, "accuratezzaM": { "type": "number" }, "fonte": { "enum": ["dispositivo", "exif"] } }
+        },
+        "figuraBase": { "type": "string", "description": "Per annotazioni: id della figura annotata (originale intatto)" },
+        "riservata": { "type": "boolean", "default": false },
+        "annullata": {
+          "type": "object", "required": ["il", "motivo"], "additionalProperties": false,
+          "properties": { "il": { "type": "string", "format": "date-time" }, "motivo": { "type": "string", "minLength": 1 } },
+          "description": "Annullare non cancella: l'evidenza resta nel pacchetto"
+        }
+      }
+    },
+
+    "datoRilevato": {
+      "type": "object",
+      "required": ["valore", "il"],
+      "additionalProperties": false,
+      "properties": {
+        "grandezza": { "type": "string" },
+        "momento": { "enum": ["arrivo", "intermedia", "partenza", "unica"] },
+        "ripetizione": { "type": "integer", "minimum": 1 },
+        "valore": { "type": ["string", "number", "boolean", "null"] },
+        "unita": { "type": "string" },
+        "il": { "type": "string", "format": "date-time" },
+        "oraCorretta": {
+          "type": "object", "additionalProperties": false, "required": ["da", "motivo"],
+          "properties": { "da": { "type": "string" }, "motivo": { "type": "string" } },
+          "description": "Se l'ora è stata corretta a mano: valore automatico originale e motivo"
+        }
+      }
+    },
+
+    "cella": {
+      "type": "object",
+      "required": ["stato", "il"],
+      "additionalProperties": false,
+      "properties": {
+        "stato": { "enum": ["confermato", "corretto", "rilevato", "nonVerificabile"] },
+        "valore": { "type": ["string", "number", "boolean", "null"] },
+        "valoreAgliAtti": { "type": ["string", "number", "boolean", "null"] },
+        "classe": { "type": "string" },
+        "fonte": { "type": "string" },
+        "motivo": { "type": "string" },
+        "il": { "type": "string", "format": "date-time" },
+        "evidenze": { "$ref": "#/$defs/listaEvidenze" }
+      }
+    },
+
+    "esitoBase": {
+      "type": "object",
+      "required": ["tipo", "stato", "aggiornatoIl"],
+      "properties": {
+        "tipo": { "type": "string" },
+        "stato": { "type": "string" },
+        "aggiornatoIl": { "type": "string", "format": "date-time" },
+        "evidenze": { "$ref": "#/$defs/listaEvidenze" },
+        "note": { "type": "string" },
+        "notaInterna": { "type": "string", "description": "Mai nei report per il cliente" }
+      }
+    },
+
+    "esito": {
+      "oneOf": [
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "verifica" },
+            "stato": { "enum": ["aperto", "confermato", "corretto", "difforme", "nonVerificabile", "daIntegrare"] },
+            "valoreRilevato": { "type": ["string", "number", "boolean", "null"] },
+            "classe": { "type": "string" },
+            "fonte": { "type": "string" },
+            "motivo": { "type": "string" }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "domanda" },
+            "stato": { "enum": ["aperta", "risposta", "nonRisposta", "rinviata"] },
+            "risposta": { "type": "string" },
+            "rispostaDa": { "type": "string", "description": "Nome e ruolo di chi ha risposto" },
+            "provenienza": { "enum": ["R", "D"] },
+            "daConfermarePerIscritto": { "type": "boolean" }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "foto" },
+            "stato": { "enum": ["aperta", "fatta", "nonDisponibile"] },
+            "motivo": { "type": "string" }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "enum": ["lettura", "misura"] },
+            "stato": { "enum": ["aperta", "parziale", "completa", "nonEseguibile"] },
+            "valori": { "type": "array", "items": { "$ref": "#/$defs/datoRilevato" } },
+            "strumentoUsato": { "type": "string" },
+            "motivo": { "type": "string" }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "documento" },
+            "stato": { "enum": ["aperto", "ritiratoOriginale", "ritiratoCopia", "fotografato", "promesso", "nonDisponibile"] },
+            "promessoEntro": { "type": "string", "format": "date" },
+            "chiLoInvia": { "type": "string" },
+            "motivo": { "type": "string" }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "anomalia" },
+            "stato": { "enum": ["aperta", "chiusa", "limite"] },
+            "esito": { "type": "string" }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "tabella" },
+            "stato": { "enum": ["aperta", "parziale", "completa"] },
+            "celle": {
+              "type": "object",
+              "description": "rigaId -> colonnaId -> cella",
+              "additionalProperties": { "type": "object", "additionalProperties": { "$ref": "#/$defs/cella" } }
+            },
+            "righeAggiunte": {
+              "type": "array",
+              "items": {
+                "type": "object", "required": ["id", "il"], "additionalProperties": false,
+                "properties": { "id": { "type": "string" }, "il": { "type": "string", "format": "date-time" }, "annullata": { "type": "boolean" } }
+              }
+            },
+            "csv": { "type": "string", "description": "Percorso del CSV nel pacchetto, es. report/tabelle/TAB-CNC.csv" }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "protocollo" },
+            "stato": { "enum": ["aperto", "inCorso", "completo", "parziale", "nonEseguito"] },
+            "passi": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object", "required": ["stato"], "additionalProperties": false,
+                "properties": {
+                  "stato": { "enum": ["daFare", "eseguito", "saltato"] },
+                  "oraEffettiva": { "type": "string", "format": "date-time" },
+                  "eseguitoDa": { "type": "string" },
+                  "valori": { "type": "array", "items": { "$ref": "#/$defs/datoRilevato" } },
+                  "note": { "type": "string" },
+                  "motivo": { "type": "string" }
+                }
+              }
+            },
+            "ripristino": {
+              "type": "object", "additionalProperties": false,
+              "properties": { "il": { "type": "string", "format": "date-time" }, "firma": { "$ref": "#/$defs/uuid" }, "nome": { "type": "string" } }
+            }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "uscitaArea" },
+            "stato": { "enum": ["aperta", "chiusa", "chiusaConDeroga"] }
+          },
+          "unevaluatedProperties": false
+        },
+        {
+          "allOf": [{ "$ref": "#/$defs/esitoBase" }],
+          "properties": {
+            "tipo": { "const": "informazione" },
+            "stato": { "enum": ["letta"] }
+          },
+          "unevaluatedProperties": false
+        }
+      ]
+    }
+  }
+}

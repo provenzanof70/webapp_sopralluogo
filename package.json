@@ -1,0 +1,32 @@
+{
+  "name": "sopralluogo-mcstudio",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "validatori": "node scripts/genera-validatori.mjs",
+    "dev": "npm run validatori && vite",
+    "build": "npm run validatori && tsc --noEmit && vite build",
+    "test": "npm run validatori && vitest run",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
+    "dexie": "^4.4.7",
+    "fflate": "^0.8.3",
+    "pdf-lib": "^1.17.1",
+    "preact": "^10.29.8"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.6",
+    "@types/node": "^22.20.5",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "fake-indexeddb": "^6.2.6",
+    "typescript": "^5.9.3",
+    "vite": "^6.4.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^3.2.7",
+    "workbox-window": "^7.4.1"
+  }
+}

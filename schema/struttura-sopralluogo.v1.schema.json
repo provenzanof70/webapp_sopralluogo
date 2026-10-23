@@ -1,0 +1,527 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "struttura-sopralluogo.v1.schema.json",
+  "title": "Struttura di sopralluogo MC Studio — v1",
+  "description": "Contratto fra la skill di progetto (che genera il file) e l'app di sopralluogo (che lo importa). Contiene SOLO ciò che viene dal progetto: cosa verificare, domande, foto, letture, misure, documenti, tabelle di rilievo, anomalie, protocolli. Non contiene esiti di campo. Ogni valore precompilato è un dato agli atti con classe e fonte.",
+  "type": "object",
+  "required": ["formato", "versioneSchema", "idStruttura", "generazione", "pratica", "aree", "elementi"],
+  "additionalProperties": false,
+  "properties": {
+    "formato": { "const": "mcstudio.sopralluogo.struttura" },
+    "versioneSchema": { "type": "string", "pattern": "^1\\.[0-9]+\\.[0-9]+$" },
+    "idStruttura": { "type": "string", "format": "uuid", "description": "UUID nuovo a ogni revisione generata. Lega il pacchetto di rientro alla struttura." },
+    "generazione": { "$ref": "#/$defs/generazione" },
+    "pratica": { "$ref": "#/$defs/pratica" },
+    "persone": { "type": "array", "items": { "$ref": "#/$defs/persona" } },
+    "legenda": { "$ref": "#/$defs/legenda" },
+    "regoleCampo": { "type": "array", "items": { "$ref": "#/$defs/testo" } },
+    "obiettivi": { "type": "array", "items": { "$ref": "#/$defs/obiettivo" } },
+    "nonLasciare": { "type": "array", "items": { "$ref": "#/$defs/voceNonLasciare" } },
+    "preparazione": { "type": "array", "items": { "$ref": "#/$defs/voceChecklist" } },
+    "strumenti": { "type": "array", "items": { "$ref": "#/$defs/strumento" } },
+    "programma": { "type": "array", "items": { "$ref": "#/$defs/fasciaProgramma" } },
+    "aree": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/area" } },
+    "elementi": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/elemento" } },
+    "figure": { "type": "array", "items": { "$ref": "#/$defs/figura" } },
+    "verbale": { "$ref": "#/$defs/verbale" },
+    "dopoSopralluogo": { "type": "array", "items": { "$ref": "#/$defs/voceChecklist" } }
+  },
+
+  "$defs": {
+    "testo": { "type": "string", "minLength": 1 },
+    "codice": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$", "description": "Codice univoco nella struttura: F24, Q05, QA01, L01, M13, D16, Z01, GR0, C08a, T01, TAB-CNC…" },
+    "priorita": { "enum": ["A", "B", "C"] },
+    "ora": { "type": "string", "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+    "data": { "type": "string", "format": "date" },
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "valore": { "type": ["string", "number", "boolean"] },
+    "listaCodici": { "type": "array", "items": { "$ref": "#/$defs/codice" }, "uniqueItems": true },
+
+    "datoAtti": {
+      "description": "Dato già agli atti (cella grigia): si CONFERMA o si CORREGGE in campo, mai si sovrascrive.",
+      "type": "object",
+      "required": ["valore"],
+      "additionalProperties": false,
+      "properties": {
+        "valore": { "$ref": "#/$defs/valore" },
+        "unita": { "type": "string" },
+        "classe": { "type": "string", "maxLength": 8, "description": "Chiave di legenda.classi (es. M, F, S, D, R)" },
+        "origine": { "type": "string", "maxLength": 8, "description": "Es. D dichiarato, T targa" },
+        "fonte": { "type": "string", "description": "Documento e data da cui viene il dato" },
+        "nota": { "type": "string" }
+      }
+    },
+
+    "grandezza": {
+      "type": "object",
+      "required": ["id", "nome"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "nome": { "$ref": "#/$defs/testo" },
+        "unita": { "type": "string" },
+        "tipoValore": { "enum": ["numero", "intero", "testo", "siNo"], "default": "numero" },
+        "ripetizioni": { "type": "integer", "minimum": 1, "default": 1, "description": "Es. 3 letture dell'azimut" }
+      }
+    },
+
+    "generazione": {
+      "type": "object",
+      "required": ["il", "da", "revisione"],
+      "additionalProperties": false,
+      "properties": {
+        "il": { "type": "string", "format": "date-time" },
+        "da": { "$ref": "#/$defs/testo", "description": "Es. skill sopralluogo-guida-schede-rilievo" },
+        "revisione": { "$ref": "#/$defs/testo", "description": "Es. rev.002 del 10/10/2026 — la stessa del PDF di campo" },
+        "sorgente": {
+          "type": "object", "additionalProperties": false, "required": ["file"],
+          "properties": { "file": { "type": "string" }, "sha256": { "$ref": "#/$defs/sha256" } }
+        },
+        "pdfCampo": {
+          "type": "object", "additionalProperties": false, "required": ["file"],
+          "properties": { "file": { "type": "string" }, "sha256": { "$ref": "#/$defs/sha256" } },
+          "description": "PDF stampato come copia di sicurezza; se incluso nel pacchetto sta in campo/"
+        }
+      }
+    },
+
+    "pratica": {
+      "type": "object",
+      "required": ["codice", "titolo", "tipo", "committente", "sito", "data", "redattore", "prefissoFile"],
+      "additionalProperties": false,
+      "properties": {
+        "codice": { "$ref": "#/$defs/testo", "description": "Es. 093" },
+        "titolo": { "$ref": "#/$defs/testo" },
+        "tipo": { "enum": ["diagnosi_energetica", "perizia_4_0", "perizia_5_0", "conto_termico", "isi_inail", "ctu", "altro"] },
+        "riferimentiNormativi": { "type": "array", "items": { "$ref": "#/$defs/testo" } },
+        "committente": {
+          "type": "object", "required": ["ragioneSociale"], "additionalProperties": false,
+          "properties": {
+            "ragioneSociale": { "$ref": "#/$defs/testo" },
+            "piva": { "type": "string" },
+            "sede": { "type": "string" }
+          }
+        },
+        "sito": {
+          "type": "object", "required": ["denominazione"], "additionalProperties": false,
+          "properties": {
+            "denominazione": { "$ref": "#/$defs/testo" },
+            "indirizzo": { "type": "string" },
+            "codice": { "type": "string", "description": "Es. sito 01 nelle diagnosi multisito" },
+            "note": { "type": "string" }
+          }
+        },
+        "data": { "$ref": "#/$defs/data" },
+        "dalle": { "$ref": "#/$defs/ora" },
+        "alle": { "$ref": "#/$defs/ora" },
+        "redattore": {
+          "type": "object", "required": ["nome", "societa"], "additionalProperties": false,
+          "properties": {
+            "nome": { "$ref": "#/$defs/testo" },
+            "qualifica": { "type": "string" },
+            "societa": { "$ref": "#/$defs/testo" },
+            "telefono": { "type": "string" }
+          }
+        },
+        "rapportoRiferimento": { "type": "string" },
+        "prefissoFile": { "type": "string", "pattern": "^[A-Za-z0-9]{2,12}$", "description": "Prefisso dei nomi delle evidenze, es. TKD, NEOLIT" },
+        "cartellaSopralluogo": { "type": "string", "description": "Percorso relativo nella pratica, es. 05. Sopralluogo e misure/SOPRALLUOGO DEL 16-10-2026/" }
+      }
+    },
+
+    "persona": {
+      "type": "object",
+      "required": ["id", "nome", "parte"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "nome": { "$ref": "#/$defs/testo" },
+        "ruolo": { "type": "string" },
+        "societa": { "type": "string" },
+        "telefono": { "type": "string" },
+        "email": { "type": "string" },
+        "presenza": { "type": "string", "description": "Es. dalle 16:00" },
+        "parte": { "enum": ["committente", "redattore", "terzi"] }
+      }
+    },
+
+    "legenda": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "priorita": {
+          "type": "object", "additionalProperties": false,
+          "properties": { "A": { "type": "string" }, "B": { "type": "string" }, "C": { "type": "string" } }
+        },
+        "classi": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Es. {\"M\":\"misurato\",\"F\":\"documentale\",\"S\":\"stimato\"}" },
+        "origini": { "type": "object", "additionalProperties": { "type": "string" } },
+        "provenienzaRisposte": { "type": "object", "additionalProperties": { "type": "string" }, "description": "Es. {\"R\":\"riscontrato\",\"D\":\"dichiarato\"}" },
+        "formule": { "type": "array", "items": { "type": "string" } },
+        "note": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "obiettivo": {
+      "type": "object",
+      "required": ["id", "titolo"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "titolo": { "$ref": "#/$defs/testo" },
+        "stato": { "type": "string", "description": "Stato agli atti prima del sopralluogo" },
+        "evidenza": { "type": "string", "description": "Evidenza da portare a casa" },
+        "rif": { "$ref": "#/$defs/listaCodici" }
+      }
+    },
+
+    "voceNonLasciare": {
+      "type": "object",
+      "required": ["n", "testo", "rif"],
+      "additionalProperties": false,
+      "properties": {
+        "n": { "type": "integer", "minimum": 1 },
+        "testo": { "$ref": "#/$defs/testo" },
+        "area": { "$ref": "#/$defs/codice" },
+        "rif": { "$ref": "#/$defs/listaCodici", "description": "L'app calcola lo stato dalla completezza di questi codici" },
+        "obiettivi": { "$ref": "#/$defs/listaCodici" }
+      }
+    },
+
+    "voceChecklist": {
+      "type": "object",
+      "required": ["testo"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "testo": { "$ref": "#/$defs/testo" },
+        "chi": { "type": "string" },
+        "entro": { "type": "string" },
+        "priorita": { "$ref": "#/$defs/priorita" }
+      }
+    },
+
+    "strumento": {
+      "type": "object",
+      "required": ["nome"],
+      "additionalProperties": false,
+      "properties": {
+        "nome": { "$ref": "#/$defs/testo" },
+        "uso": { "type": "string" },
+        "classeLimiti": { "type": "string" }
+      }
+    },
+
+    "fasciaProgramma": {
+      "type": "object",
+      "required": ["dalle", "attivita"],
+      "additionalProperties": false,
+      "properties": {
+        "dalle": { "$ref": "#/$defs/ora" },
+        "alle": { "$ref": "#/$defs/ora" },
+        "attivita": { "$ref": "#/$defs/testo" },
+        "chi": { "type": "string" },
+        "aree": { "$ref": "#/$defs/listaCodici" }
+      }
+    },
+
+    "area": {
+      "type": "object",
+      "required": ["id", "titolo", "ordine"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice", "description": "Codice breve, es. CNC, CMP, CT, UFF — è anche il cartellino da inquadrare nella prima foto" },
+        "titolo": { "$ref": "#/$defs/testo" },
+        "ordine": { "type": "integer", "minimum": 0 },
+        "capitoloPdf": { "type": "string", "description": "Es. 6.1 — collega alla pagina del PDF di campo" },
+        "dalle": { "$ref": "#/$defs/ora" },
+        "alle": { "$ref": "#/$defs/ora" },
+        "accompagnatore": { "type": "string" },
+        "scopo": { "type": "string" },
+        "figure": { "$ref": "#/$defs/listaCodici" }
+      }
+    },
+
+    "figura": {
+      "type": "object",
+      "required": ["id", "titolo", "file", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "titolo": { "$ref": "#/$defs/testo" },
+        "file": { "type": "string", "pattern": "^figure/[A-Za-z0-9._-]+\\.(png|jpg|jpeg)$" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "annotabile": { "type": "boolean", "default": true },
+        "copieDaSiglare": { "type": "integer", "minimum": 0, "default": 0, "description": "Es. schema a blocchi da far siglare" }
+      }
+    },
+
+    "verbale": {
+      "type": "object",
+      "required": ["titolo", "firme"],
+      "additionalProperties": false,
+      "properties": {
+        "titolo": { "$ref": "#/$defs/testo" },
+        "testoIntroduttivo": { "type": "string", "description": "Può contenere segnaposto {data}, {dalle}, {alle}, {sito}, {committente}" },
+        "campi": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["id", "etichetta"], "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/$defs/codice" },
+              "etichetta": { "$ref": "#/$defs/testo" },
+              "tipoValore": { "enum": ["testo", "testoLungo", "ora", "data", "elencoAree", "elencoPresenti", "lettureRiferimento", "documentiStato", "dichiarazioniDaConfermare"], "default": "testo" },
+              "valoreIniziale": { "type": "string" }
+            }
+          }
+        },
+        "puntiApertiPrecompilati": {
+          "type": "array",
+          "items": {
+            "type": "object", "required": ["testo"], "additionalProperties": false,
+            "properties": { "testo": { "$ref": "#/$defs/testo" }, "responsabile": { "type": "string" }, "entro": { "type": "string" } }
+          }
+        },
+        "noteFisse": { "type": "array", "items": { "type": "string" } },
+        "firme": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["id", "ruolo", "parte"], "additionalProperties": false,
+            "properties": {
+              "id": { "$ref": "#/$defs/codice" },
+              "ruolo": { "$ref": "#/$defs/testo" },
+              "parte": { "enum": ["committente", "redattore", "terzi"] },
+              "persona": { "$ref": "#/$defs/codice" }
+            }
+          }
+        }
+      }
+    },
+
+    "baseElemento": {
+      "type": "object",
+      "required": ["id", "tipo", "area", "ordine"],
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "tipo": { "type": "string" },
+        "area": { "$ref": "#/$defs/codice" },
+        "ordine": { "type": "integer", "minimum": 0 },
+        "priorita": { "$ref": "#/$defs/priorita" },
+        "titolo": { "type": "string" },
+        "rif": { "$ref": "#/$defs/listaCodici", "description": "Rimandi incrociati (obiettivi O*, anomalie Z*, residui R*, utenze C*…)" },
+        "capitoloPdf": { "type": "string" },
+        "riservato": { "type": "boolean", "default": false, "description": "Mai nel report per il cliente" },
+        "nota": { "type": "string" }
+      }
+    },
+
+    "elemento": {
+      "oneOf": [
+        { "$ref": "#/$defs/elVerifica" },
+        { "$ref": "#/$defs/elDomanda" },
+        { "$ref": "#/$defs/elFoto" },
+        { "$ref": "#/$defs/elLettura" },
+        { "$ref": "#/$defs/elMisura" },
+        { "$ref": "#/$defs/elDocumento" },
+        { "$ref": "#/$defs/elAnomalia" },
+        { "$ref": "#/$defs/elTabella" },
+        { "$ref": "#/$defs/elProtocollo" },
+        { "$ref": "#/$defs/elUscitaArea" },
+        { "$ref": "#/$defs/elInformazione" }
+      ]
+    },
+
+    "elVerifica": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["testo"],
+      "properties": {
+        "tipo": { "const": "verifica" },
+        "testo": { "$ref": "#/$defs/testo" },
+        "agliAtti": { "$ref": "#/$defs/datoAtti" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elDomanda": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["testo"],
+      "properties": {
+        "tipo": { "const": "domanda" },
+        "testo": { "$ref": "#/$defs/testo" },
+        "destinatario": { "type": "string", "description": "id persona o ruolo (Referenti tecnici, Elettricista…)" },
+        "perche": { "type": "string" },
+        "temaSensibile": { "type": "boolean", "default": false, "description": "Da porre in forma tecnica neutra" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elFoto": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["oggetto"],
+      "properties": {
+        "tipo": { "const": "foto" },
+        "oggetto": { "$ref": "#/$defs/testo" },
+        "leggibile": { "type": "string", "description": "Cosa deve essere leggibile (targa, display, matricola, data)" },
+        "serveA": { "type": "string" },
+        "scattiMinimi": { "type": "integer", "minimum": 1, "default": 2 }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elLettura": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["strumento", "grandezze", "momenti"],
+      "properties": {
+        "tipo": { "const": "lettura" },
+        "strumento": { "$ref": "#/$defs/testo" },
+        "grandezze": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/grandezza" } },
+        "dove": { "type": "string" },
+        "momenti": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "enum": ["arrivo", "intermedia", "partenza", "unica"] } },
+        "gruppo": { "type": "string", "description": "Letture contemporanee: stesso gruppo = stesso minuto (es. CONTEMPORANEE)" },
+        "controlloCoerenza": { "type": "string" },
+        "agliAtti": { "$ref": "#/$defs/datoAtti", "description": "Es. matricola, costante K" },
+        "fotoCollegate": { "$ref": "#/$defs/listaCodici" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elMisura": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["cosa", "strumento", "grandezze"],
+      "properties": {
+        "tipo": { "const": "misura" },
+        "cosa": { "$ref": "#/$defs/testo" },
+        "strumento": { "$ref": "#/$defs/testo" },
+        "perche": { "type": "string" },
+        "grandezze": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/grandezza" } },
+        "indicativa": { "type": "boolean", "default": false, "description": "Strumento non tarato (luxmetro da smartphone…)" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elDocumento": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["documento"],
+      "properties": {
+        "tipo": { "const": "documento" },
+        "documento": { "$ref": "#/$defs/testo" },
+        "daChi": { "type": "string" },
+        "perche": { "type": "string" },
+        "sito": { "type": "string" },
+        "daPreparareInGiornata": { "type": "boolean", "default": false }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elAnomalia": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["tema", "datoAtti"],
+      "properties": {
+        "tipo": { "const": "anomalia" },
+        "tema": { "$ref": "#/$defs/testo" },
+        "datoAtti": { "$ref": "#/$defs/testo", "description": "Dati agli atti a confronto" },
+        "evidenzaDaRaccogliere": { "type": "string" },
+        "doveSiVerifica": { "$ref": "#/$defs/listaCodici" },
+        "riferimentoRegistro": { "type": "string", "description": "Es. A01 del registro dei residui" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "colonna": {
+      "type": "object",
+      "required": ["id", "etichetta"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "etichetta": { "$ref": "#/$defs/testo" },
+        "tipoValore": { "enum": ["testo", "numero", "intero", "scelta", "siNo", "ora", "data", "codici"], "default": "testo" },
+        "unita": { "type": "string" },
+        "scelte": { "type": "array", "items": { "type": "string" } },
+        "chiave": { "type": "boolean", "default": false, "description": "Colonna che identifica la riga (es. utenza)" },
+        "solaLettura": { "type": "boolean", "default": false }
+      }
+    },
+
+    "riga": {
+      "type": "object",
+      "required": ["id"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "celle": {
+          "type": "object",
+          "description": "Solo le celle agli atti (grigie). Le colonne non presenti sono da rilevare (bianche).",
+          "additionalProperties": { "$ref": "#/$defs/datoAtti" }
+        }
+      }
+    },
+
+    "elTabella": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["titolo", "colonne"],
+      "properties": {
+        "tipo": { "const": "tabella" },
+        "colonne": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/colonna" } },
+        "righe": { "type": "array", "items": { "$ref": "#/$defs/riga" } },
+        "consentiRigheAggiuntive": { "type": "boolean", "default": true },
+        "solaLettura": { "type": "boolean", "default": false, "description": "Tabella informativa (es. profilo dei carichi di base agli atti)" },
+        "notaPiede": { "type": "string" }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "passo": {
+      "type": "object",
+      "required": ["id", "manovra"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/codice" },
+        "orarioPrevisto": { "$ref": "#/$defs/ora" },
+        "alle": { "$ref": "#/$defs/ora" },
+        "manovra": { "$ref": "#/$defs/testo" },
+        "esegue": { "type": "string" },
+        "grandezze": { "type": "array", "items": { "$ref": "#/$defs/grandezza" } }
+      }
+    },
+
+    "elProtocollo": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["titolo", "passi"],
+      "properties": {
+        "tipo": { "const": "protocollo" },
+        "scopo": { "type": "string" },
+        "passi": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/passo" } },
+        "regole": { "type": "array", "items": { "$ref": "#/$defs/testo" } },
+        "firmaRipristino": { "type": "boolean", "default": false },
+        "daLasciareAlCliente": { "type": "boolean", "default": false }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elUscitaArea": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["voci"],
+      "properties": {
+        "tipo": { "const": "uscitaArea" },
+        "voci": {
+          "type": "array", "minItems": 1,
+          "items": {
+            "type": "object", "required": ["testo"], "additionalProperties": false,
+            "properties": { "testo": { "$ref": "#/$defs/testo" }, "rif": { "$ref": "#/$defs/listaCodici" } }
+          }
+        }
+      },
+      "unevaluatedProperties": false
+    },
+
+    "elInformazione": {
+      "allOf": [{ "$ref": "#/$defs/baseElemento" }],
+      "required": ["testo"],
+      "properties": {
+        "tipo": { "const": "informazione" },
+        "testo": { "$ref": "#/$defs/testo" },
+        "figura": { "$ref": "#/$defs/codice" }
+      },
+      "unevaluatedProperties": false
+    }
+  }
+}

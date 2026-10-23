@@ -1,0 +1,14 @@
+type V = ((d: unknown) => boolean) & { errors?: Array<{ instancePath: string; message?: string; params?: unknown }> | null };
+export declare const validaStruttura: V;
+export declare const validaRientro: V;
+export declare const elemento_verifica: V;
+export declare const elemento_domanda: V;
+export declare const elemento_foto: V;
+export declare const elemento_lettura: V;
+export declare const elemento_misura: V;
+export declare const elemento_documento: V;
+export declare const elemento_anomalia: V;
+export declare const elemento_tabella: V;
+export declare const elemento_protocollo: V;
+export declare const elemento_uscitaArea: V;
+export declare const elemento_informazione: V;
