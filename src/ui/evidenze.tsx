@@ -213,6 +213,9 @@ export async function consegnaFile(nome: string, blob: Blob, titolo: string): Pr
   const a = document.createElement('a');
   a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(u), 60000);
-  await messaggio('File pronto', `«${nome}» è stato scaricato. Spostalo nella cartella OneDrive della pratica.`);
+  const android = /Android/i.test(navigator.userAgent);
+  await messaggio('File pronto', `«${nome}» è stato salvato nei download del dispositivo.\n\n${android
+    ? 'Dove trovarlo: app «File» (o «I miei file») → cartella Download.\nPer metterlo su OneDrive: app OneDrive → cartella della pratica → «+» → Carica → Download → il file.'
+    : 'Dove trovarlo: app «File» → Download (oppure la cartella download del browser).\nPoi spostalo nella cartella OneDrive della pratica.'}`);
   return true;
 }
