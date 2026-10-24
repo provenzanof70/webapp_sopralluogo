@@ -1,0 +1,872 @@
+{
+  "formato": "mcstudio.sopralluogo.struttura",
+  "versioneSchema": "1.1.0",
+  "idStruttura": "7d0c5b3e-1111-4a1a-9a1a-000000000011",
+  "generazione": {
+    "il": "2026-10-10T18:30:00+02:00",
+    "da": "skill sopralluogo-guida-schede-rilievo",
+    "revisione": "rev.002 (schema 1.1) — esempio fittizio",
+    "sorgente": {
+      "file": "04. Elaborati di analisi/sopralluogo_2026-10-16/struttura.json"
+    },
+    "pdfCampo": {
+      "file": "campo/SOPRALLUOGO_ESEMPIO_2026-10-16_rev001.pdf"
+    }
+  },
+  "pratica": {
+    "codice": "999",
+    "titolo": "Diagnosi energetica UNI CEI EN 16247 — DATI FITTIZI DI PROVA",
+    "tipo": "diagnosi_energetica",
+    "riferimentiNormativi": [
+      "UNI CEI EN 16247-1",
+      "UNI CEI EN 16247-3"
+    ],
+    "committente": {
+      "ragioneSociale": "ESEMPIO MECCANICA S.R.L. (fittizia)",
+      "piva": "00000000000",
+      "sede": "Via di Prova 1, 00000 Comune di Prova"
+    },
+    "sito": {
+      "denominazione": "Stabilimento unico (fittizio)",
+      "indirizzo": "Via di Prova 1, 00000 Comune di Prova"
+    },
+    "data": "2026-10-16",
+    "dalle": "14:30",
+    "alle": "18:30",
+    "redattore": {
+      "nome": "ing. Mario Rossi (fittizio)",
+      "qualifica": "EGE UNI CEI 11339",
+      "societa": "Studio di prova S.r.l."
+    },
+    "rapportoRiferimento": "BOZZA rev.010 del 02/10/2026 (fittizia)",
+    "prefissoFile": "ESEMPIO",
+    "cartellaSopralluogo": "05. Sopralluogo e misure/SOPRALLUOGO DEL 16-10-2026/"
+  },
+  "persone": [
+    {
+      "id": "P1",
+      "nome": "Anna Bianchi",
+      "ruolo": "Referente tecnico",
+      "societa": "ESEMPIO MECCANICA",
+      "telefono": "000 0000000",
+      "parte": "committente"
+    },
+    {
+      "id": "P2",
+      "nome": "Elettricista di fiducia",
+      "ruolo": "Manutentore elettrico",
+      "presenza": "dalle 16:00",
+      "parte": "terzi"
+    },
+    {
+      "id": "P3",
+      "nome": "ing. Mario Rossi",
+      "ruolo": "REDE",
+      "societa": "Studio di prova S.r.l.",
+      "parte": "redattore"
+    }
+  ],
+  "legenda": {
+    "priorita": {
+      "A": "Non recuperabile a distanza o necessaria per un obiettivo",
+      "B": "Necessaria per chiudere il modello (≤ 5% per vettore)",
+      "C": "Utile, recuperabile per iscritto"
+    },
+    "classi": {
+      "M": "misurato",
+      "F": "documentale o fatturato",
+      "S": "stimato"
+    },
+    "origini": {
+      "D": "dichiarato",
+      "T": "targa o scheda tecnica"
+    },
+    "provenienzaRisposte": {
+      "R": "riscontrato a vista",
+      "D": "solo dichiarato"
+    },
+    "formule": [
+      "E = N · FC · CC · (Pn/η) · d · FU"
+    ]
+  },
+  "regoleCampo": [
+    "Due foto per oggetto: una d'insieme e una di dettaglio (targa, display).",
+    "Ogni lettura con l'ora al minuto.",
+    "Nessuna manovra del tecnico: aperture e sezionamenti solo a cura del personale del Cliente.",
+    "I documenti arrivano dal Cliente: ciò che non è pronto diventa «promesso entro / chi lo invia».",
+    "Tono prudente: nessuna conclusione comunicata in sito."
+  ],
+  "obiettivi": [
+    {
+      "id": "O1",
+      "titolo": "Sopralluogo eseguito e documentato (UNI CEI EN 16247-1, 5.5)",
+      "stato": "Aperto",
+      "evidenza": "Verbale firmato, foto, letture con ora",
+      "rif": [
+        "L01",
+        "F35"
+      ]
+    },
+    {
+      "id": "O2",
+      "titolo": "Modello elettrico validato sui tre regimi",
+      "stato": "Provvisorio",
+      "evidenza": "Prova a gradini, contaore del compressore",
+      "rif": [
+        "GR",
+        "L03",
+        "Q17"
+      ]
+    }
+  ],
+  "nonLasciare": [
+    {
+      "n": 1,
+      "testo": "Verbale firmato dai presenti",
+      "area": "CHIUSURA",
+      "rif": [
+        "F63"
+      ]
+    },
+    {
+      "n": 2,
+      "testo": "Letture contemporanee all'arrivo e alla partenza, con ora",
+      "area": "ARRIVO",
+      "rif": [
+        "L01",
+        "L03"
+      ]
+    },
+    {
+      "n": 3,
+      "testo": "Tutte le schermate del controllore del compressore",
+      "area": "CMP",
+      "rif": [
+        "F36",
+        "L03"
+      ]
+    },
+    {
+      "n": 4,
+      "testo": "Logica di comando dell'essiccatore",
+      "area": "CMP",
+      "rif": [
+        "Q18",
+        "F37"
+      ],
+      "obiettivi": [
+        "O2"
+      ]
+    }
+  ],
+  "preparazione": [
+    {
+      "id": "P-01",
+      "testo": "Stampare il PDF di campo (copia di sicurezza) e le figure A3",
+      "priorita": "A"
+    },
+    {
+      "id": "P-02",
+      "testo": "Telefono carico, powerbank, ora sincronizzata",
+      "priorita": "A"
+    }
+  ],
+  "strumenti": [
+    {
+      "nome": "Distanziometro laser",
+      "uso": "altezze, volte, percorsi",
+      "classeLimiti": "M; accuratezza da scheda del costruttore"
+    },
+    {
+      "nome": "Luxmetro da smartphone",
+      "uso": "illuminamento sul piano di lavoro",
+      "classeLimiti": "non tarato: valore indicativo, classe S"
+    }
+  ],
+  "programma": [
+    {
+      "dalle": "14:30",
+      "alle": "14:50",
+      "attivita": "Riunione di apertura e letture all'arrivo",
+      "chi": "REDE, referente tecnico",
+      "aree": [
+        "APERTURA",
+        "ARRIVO"
+      ]
+    },
+    {
+      "dalle": "15:30",
+      "alle": "15:45",
+      "attivita": "Locale compressore in esercizio",
+      "chi": "REDE, referente",
+      "aree": [
+        "CMP"
+      ]
+    },
+    {
+      "dalle": "16:45",
+      "alle": "18:15",
+      "attivita": "Prova a gradini in sottofondo; intanto ufficio",
+      "chi": "elettricista, REDE",
+      "aree": [
+        "FT",
+        "UFF"
+      ]
+    },
+    {
+      "dalle": "18:15",
+      "alle": "18:30",
+      "attivita": "Letture alla partenza, chiusura e verbale",
+      "chi": "REDE, referente",
+      "aree": [
+        "ARRIVO",
+        "CHIUSURA"
+      ]
+    }
+  ],
+  "aree": [
+    {
+      "id": "APERTURA",
+      "titolo": "Riunione di apertura e dati generali",
+      "ordine": 1,
+      "capitoloPdf": "4",
+      "dalle": "14:30",
+      "alle": "14:50",
+      "accompagnatore": "Anna Bianchi",
+      "scopo": "Consensi, perimetro, documenti A da preparare in giornata"
+    },
+    {
+      "id": "ARRIVO",
+      "titolo": "Letture contemporanee — arrivo e partenza",
+      "ordine": 2,
+      "capitoloPdf": "5",
+      "scopo": "Stesso minuto per tutte le letture"
+    },
+    {
+      "id": "CMP",
+      "titolo": "Locale compressore",
+      "ordine": 3,
+      "capitoloPdf": "6.3",
+      "dalle": "15:30",
+      "alle": "15:45",
+      "accompagnatore": "Anna Bianchi",
+      "scopo": "Ore e pressioni dal controllore, alimentazione dell'essiccatore",
+      "figure": [
+        "FIG1"
+      ]
+    },
+    {
+      "id": "FT",
+      "titolo": "Fine turno — prova a gradini",
+      "ordine": 4,
+      "capitoloPdf": "9",
+      "dalle": "16:45",
+      "alle": "18:30",
+      "accompagnatore": "Elettricista di fiducia"
+    },
+    {
+      "id": "UFF",
+      "titolo": "Ufficio — documenti e domande amministrative",
+      "ordine": 5,
+      "capitoloPdf": "10"
+    },
+    {
+      "id": "CHIUSURA",
+      "titolo": "Anomalie, riunione di chiusura e verbale",
+      "ordine": 6,
+      "capitoloPdf": "11"
+    }
+  ],
+  "elementi": [
+    {
+      "id": "Q04",
+      "tipo": "domanda",
+      "area": "APERTURA",
+      "ordine": 1,
+      "priorita": "A",
+      "testo": "Possiamo fotografare impianti e targhe? Ci sono aree da non fotografare?",
+      "destinatario": "Direzione",
+      "perche": "Regole di campo",
+      "titolo": "Si possono fare foto?"
+    },
+    {
+      "id": "V-PERIMETRO",
+      "tipo": "verifica",
+      "area": "APERTURA",
+      "ordine": 2,
+      "priorita": "A",
+      "testo": "Perimetro: un solo sito, un solo POD, un solo PDR",
+      "agliAtti": {
+        "valore": "1 POD MT 15 kV; 1 PDR",
+        "classe": "F",
+        "fonte": "fatture 2025"
+      },
+      "titolo": "Perimetro del sito"
+    },
+    {
+      "id": "D01",
+      "tipo": "documento",
+      "area": "APERTURA",
+      "ordine": 3,
+      "priorita": "A",
+      "documento": "Elenco delle società partecipate con le quote",
+      "daChi": "Amministrazione",
+      "perche": "Non assoggettabilità all'art. 8",
+      "daPreparareInGiornata": true,
+      "titolo": "Elenco società partecipate"
+    },
+    {
+      "id": "L01",
+      "tipo": "lettura",
+      "area": "ARRIVO",
+      "ordine": 1,
+      "priorita": "A",
+      "strumento": "Display contatore di energia del centro CNC",
+      "grandezze": [
+        {
+          "id": "kWh",
+          "nome": "progressiva",
+          "unita": "kWh"
+        }
+      ],
+      "dove": "officina",
+      "momenti": [
+        "arrivo",
+        "partenza"
+      ],
+      "gruppo": "CONTEMPORANEE",
+      "controlloCoerenza": "ΔkWh/Δh ≈ 2–3 kW se la macchina ha lavorato; 0 se ferma",
+      "fotoCollegate": [
+        "F24"
+      ],
+      "titolo": "Contatore del centro CNC",
+      "componente": "Centro CNC"
+    },
+    {
+      "id": "L03",
+      "tipo": "lettura",
+      "area": "ARRIVO",
+      "ordine": 2,
+      "priorita": "A",
+      "strumento": "Controllore del compressore",
+      "grandezze": [
+        {
+          "id": "hTot",
+          "nome": "ore totali",
+          "unita": "h",
+          "tipoValore": "intero"
+        },
+        {
+          "id": "hCarico",
+          "nome": "ore a carico",
+          "unita": "h",
+          "tipoValore": "intero"
+        }
+      ],
+      "dove": "locale compressore",
+      "momenti": [
+        "arrivo",
+        "partenza"
+      ],
+      "gruppo": "CONTEMPORANEE",
+      "controlloCoerenza": "Δ ore a carico ≤ Δ ore totali",
+      "fotoCollegate": [
+        "F36"
+      ],
+      "titolo": "Controllore del compressore",
+      "componente": "Compressore"
+    },
+    {
+      "id": "F24",
+      "tipo": "foto",
+      "area": "ARRIVO",
+      "ordine": 3,
+      "priorita": "A",
+      "oggetto": "Display del contatore di energia del centro CNC (arrivo e partenza)",
+      "leggibile": "progressiva kWh, data e ora del display",
+      "serveA": "L01",
+      "titolo": "Display del contatore CNC",
+      "componente": "Centro CNC"
+    },
+    {
+      "id": "V-CMP-01",
+      "tipo": "verifica",
+      "area": "CMP",
+      "ordine": 1,
+      "priorita": "A",
+      "testo": "Arresto a fine turno: automatico, manuale o con orologio?",
+      "agliAtti": {
+        "valore": "≈ 1.016–1.070 h/anno oltre l'orario",
+        "classe": "S",
+        "fonte": "curve 2025"
+      },
+      "rif": [
+        "Z08"
+      ],
+      "titolo": "Come si ferma a fine turno",
+      "componente": "Compressore"
+    },
+    {
+      "id": "Q17",
+      "tipo": "domanda",
+      "area": "CMP",
+      "ordine": 2,
+      "priorita": "A",
+      "testo": "A fine turno il compressore si ferma da solo, lo spegne qualcuno o ha un orologio?",
+      "destinatario": "P1",
+      "perche": "Z08",
+      "titolo": "Chi spegne il compressore?",
+      "componente": "Compressore"
+    },
+    {
+      "id": "Q18",
+      "tipo": "domanda",
+      "area": "CMP",
+      "ordine": 3,
+      "priorita": "A",
+      "testo": "L'essiccatore si spegne insieme al compressore o resta alimentato?",
+      "destinatario": "P1",
+      "perche": "Z02",
+      "temaSensibile": false,
+      "titolo": "L'essiccatore resta acceso?",
+      "componente": "Essiccatore"
+    },
+    {
+      "id": "TAB-CMP",
+      "tipo": "tabella",
+      "area": "CMP",
+      "ordine": 4,
+      "priorita": "A",
+      "titolo": "Scheda utenze — aria compressa",
+      "colonne": [
+        {
+          "id": "utenza",
+          "etichetta": "Utenza",
+          "chiave": true
+        },
+        {
+          "id": "pn",
+          "etichetta": "Pn targa",
+          "tipoValore": "numero",
+          "unita": "kW"
+        },
+        {
+          "id": "eta",
+          "etichetta": "η",
+          "tipoValore": "numero"
+        },
+        {
+          "id": "hg",
+          "etichetta": "h/g",
+          "tipoValore": "numero"
+        },
+        {
+          "id": "gga",
+          "etichetta": "gg/a",
+          "tipoValore": "intero"
+        },
+        {
+          "id": "fuoriOrario",
+          "etichetta": "Acceso fuori orario?",
+          "tipoValore": "siNo"
+        },
+        {
+          "id": "foto",
+          "etichetta": "Foto",
+          "tipoValore": "codici"
+        }
+      ],
+      "righe": [
+        {
+          "id": "C04",
+          "celle": {
+            "utenza": {
+              "valore": "Compressore a vite 11 kW, 7 bar (2018)",
+              "classe": "F",
+              "origine": "T"
+            },
+            "pn": {
+              "valore": 11,
+              "unita": "kW",
+              "classe": "F",
+              "origine": "T",
+              "fonte": "targa"
+            }
+          }
+        },
+        {
+          "id": "C05",
+          "celle": {
+            "utenza": {
+              "valore": "Essiccatore a refrigerazione",
+              "classe": "F",
+              "origine": "T"
+            },
+            "pn": {
+              "valore": 0.419,
+              "unita": "kW",
+              "classe": "F",
+              "origine": "T",
+              "fonte": "targa"
+            }
+          }
+        }
+      ],
+      "consentiRigheAggiuntive": true
+    },
+    {
+      "id": "L03b",
+      "tipo": "lettura",
+      "area": "CMP",
+      "ordine": 5,
+      "priorita": "B",
+      "strumento": "Controllore del compressore",
+      "grandezze": [
+        {
+          "id": "pSet",
+          "nome": "pressione impostata",
+          "unita": "bar"
+        },
+        {
+          "id": "pEs",
+          "nome": "pressione di esercizio",
+          "unita": "bar"
+        }
+      ],
+      "momenti": [
+        "unica"
+      ],
+      "titolo": "Ore del compressore",
+      "componente": "Compressore"
+    },
+    {
+      "id": "M05",
+      "tipo": "misura",
+      "area": "CMP",
+      "ordine": 6,
+      "priorita": "C",
+      "cosa": "Altezza interna del locale",
+      "strumento": "distanziometro laser",
+      "perche": "volume del locale",
+      "grandezze": [
+        {
+          "id": "h",
+          "nome": "altezza",
+          "unita": "m",
+          "ripetizioni": 3
+        }
+      ],
+      "titolo": "Misure del locale"
+    },
+    {
+      "id": "F35",
+      "tipo": "foto",
+      "area": "CMP",
+      "ordine": 7,
+      "priorita": "A",
+      "oggetto": "Locale compressore: vista d'insieme",
+      "leggibile": "compressore, essiccatore, serbatoio",
+      "serveA": "scheda 17",
+      "titolo": "Locale compressore",
+      "componente": "Compressore"
+    },
+    {
+      "id": "F36",
+      "tipo": "foto",
+      "area": "CMP",
+      "ordine": 8,
+      "priorita": "A",
+      "oggetto": "Controllore del compressore: ogni schermata",
+      "leggibile": "ore totali, ore a carico, pressioni",
+      "serveA": "L03 · Z08",
+      "scattiMinimi": 4,
+      "titolo": "Schermate del controllore",
+      "componente": "Compressore"
+    },
+    {
+      "id": "F37",
+      "tipo": "foto",
+      "area": "CMP",
+      "ordine": 9,
+      "priorita": "A",
+      "oggetto": "Essiccatore: targa e alimentazione",
+      "leggibile": "spina o interruttore proprio",
+      "serveA": "Q18 · Z02",
+      "titolo": "Targa dell'essiccatore",
+      "componente": "Essiccatore"
+    },
+    {
+      "id": "U-CMP",
+      "tipo": "uscitaArea",
+      "area": "CMP",
+      "ordine": 10,
+      "voci": [
+        {
+          "testo": "Tutte le schermate del controllore fotografate",
+          "rif": [
+            "F36"
+          ]
+        },
+        {
+          "testo": "Q17 e Q18 con risposta e nome",
+          "rif": [
+            "Q17",
+            "Q18"
+          ]
+        },
+        {
+          "testo": "L03 annotata con l'ora",
+          "rif": [
+            "L03"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "I-FT",
+      "tipo": "informazione",
+      "area": "FT",
+      "ordine": 1,
+      "testo": "Carico di base agli atti: ~1,22 kW continui (M, curve 2025). Manovre a :15 e :45 esatti; si legge la seconda quarta d'ora di ogni gradino."
+    },
+    {
+      "id": "GR",
+      "tipo": "protocollo",
+      "area": "FT",
+      "ordine": 2,
+      "priorita": "A",
+      "titolo": "Protocollo A — prova a gradini assistita",
+      "scopo": "Attribuire il carico di base fuori orario",
+      "passi": [
+        {
+          "id": "GR0",
+          "orarioPrevisto": "16:45",
+          "alle": "17:15",
+          "manovra": "Configurazione notturna abituale: annotare tutto ciò che resta acceso",
+          "esegue": "Elettricista del Cliente"
+        },
+        {
+          "id": "GR1",
+          "orarioPrevisto": "17:15",
+          "alle": "17:45",
+          "manovra": "Spegnere il compressore (l'essiccatore resta acceso)",
+          "esegue": "Elettricista del Cliente"
+        },
+        {
+          "id": "GR2",
+          "orarioPrevisto": "17:45",
+          "alle": "18:15",
+          "manovra": "Spegnere l'essiccatore",
+          "esegue": "Elettricista del Cliente"
+        },
+        {
+          "id": "RIP",
+          "orarioPrevisto": "18:30",
+          "manovra": "Ripristino: essiccatore PRIMA del compressore; firma del referente",
+          "esegue": "Elettricista del Cliente"
+        }
+      ],
+      "regole": [
+        "Non si toccano server, rete, allarme, luci di sicurezza.",
+        "Se il referente deve andare via prima: si toglie l'ultimo gradino."
+      ],
+      "firmaRipristino": true
+    },
+    {
+      "id": "Q48",
+      "tipo": "domanda",
+      "area": "UFF",
+      "ordine": 1,
+      "priorita": "A",
+      "testo": "Ci può fornire l'elenco delle società partecipate, con le quote?",
+      "destinatario": "Amministrazione",
+      "titolo": "Società partecipate e quote"
+    },
+    {
+      "id": "D16",
+      "tipo": "documento",
+      "area": "UFF",
+      "ordine": 2,
+      "priorita": "A",
+      "documento": "Curva quartoraria del POD da agosto a ottobre (giorno del sopralluogo compreso)",
+      "daChi": "Amministrazione → fornitore",
+      "perche": "Lettura della prova a gradini",
+      "titolo": "Curva quartoraria del POD"
+    },
+    {
+      "id": "TAB-V",
+      "tipo": "tabella",
+      "area": "UFF",
+      "ordine": 3,
+      "priorita": "B",
+      "titolo": "Scheda V — verifica dei dati di primo livello",
+      "colonne": [
+        {
+          "id": "voce",
+          "etichetta": "Voce",
+          "chiave": true,
+          "solaLettura": true
+        },
+        {
+          "id": "atti",
+          "etichetta": "Agli atti",
+          "solaLettura": true
+        },
+        {
+          "id": "conferma",
+          "etichetta": "Confermato / correzione"
+        }
+      ],
+      "righe": [
+        {
+          "id": "V-ADDETTI",
+          "celle": {
+            "voce": {
+              "valore": "Addetti"
+            },
+            "atti": {
+              "valore": "23 attuali; 24 nel 2025",
+              "classe": "F",
+              "origine": "D",
+              "fonte": "mail 26/08"
+            }
+          }
+        },
+        {
+          "id": "V-ORARIO",
+          "celle": {
+            "voce": {
+              "valore": "Orario e turni"
+            },
+            "atti": {
+              "valore": "lun–ven 8:00–16:30, un turno",
+              "classe": "F",
+              "origine": "D"
+            }
+          }
+        }
+      ],
+      "consentiRigheAggiuntive": false
+    },
+    {
+      "id": "Z02",
+      "tipo": "anomalia",
+      "area": "CHIUSURA",
+      "ordine": 1,
+      "priorita": "A",
+      "tema": "Essiccatore alimentato separatamente dal compressore",
+      "datoAtti": "Targa (F, T); carico di base delle notti festive da 0,86 a 2,36 kW (M)",
+      "doveSiVerifica": [
+        "Q18",
+        "F37",
+        "GR2"
+      ],
+      "riferimentoRegistro": "A02",
+      "riservato": true,
+      "titolo": "Essiccatore alimentato a parte"
+    },
+    {
+      "id": "Z08",
+      "tipo": "anomalia",
+      "area": "CHIUSURA",
+      "ordine": 2,
+      "priorita": "A",
+      "tema": "Ore annue del compressore",
+      "datoAtti": "~3.230 h/anno dal contaore; 9 h/giorno dichiarate",
+      "doveSiVerifica": [
+        "L03",
+        "Q17"
+      ],
+      "riservato": true,
+      "titolo": "Ore annue del compressore"
+    },
+    {
+      "id": "F63",
+      "tipo": "foto",
+      "area": "CHIUSURA",
+      "ordine": 3,
+      "priorita": "A",
+      "oggetto": "Verbale firmato (foto di sicurezza delle pagine cartacee, se usate)",
+      "leggibile": "firme",
+      "serveA": "O1",
+      "scattiMinimi": 1,
+      "titolo": "Verbale firmato (foto)"
+    }
+  ],
+  "figure": [
+    {
+      "id": "FIG1",
+      "titolo": "Planimetria piano terra (fittizia) — annotare posizione di compressore ed essiccatore",
+      "file": "figure/FIG1_planimetria.png",
+      "sha256": "18e0dfe9dab03c6ee06740fefe1f0b39aa7309cfe3b6b8dc242ed010adb83dc4",
+      "annotabile": true
+    }
+  ],
+  "verbale": {
+    "titolo": "Verbale di sopralluogo",
+    "testoIntroduttivo": "Il giorno {data}, dalle ore {dalle} alle ore {alle}, presso {sito} di {committente}, si è svolto il sopralluogo della diagnosi energetica UNI CEI EN 16247. Il verbale non contiene valutazioni conclusive: i dati saranno elaborati nel rapporto di diagnosi.",
+    "campi": [
+      {
+        "id": "presenti",
+        "etichetta": "Presenti",
+        "tipoValore": "elencoPresenti"
+      },
+      {
+        "id": "aree",
+        "etichetta": "Aree visitate",
+        "tipoValore": "elencoAree"
+      },
+      {
+        "id": "letture",
+        "etichetta": "Letture di riferimento",
+        "tipoValore": "lettureRiferimento"
+      },
+      {
+        "id": "documenti",
+        "etichetta": "Documenti ritirati, fotografati o promessi",
+        "tipoValore": "documentiStato"
+      },
+      {
+        "id": "dichiarazioni",
+        "etichetta": "Dichiarazioni del Cliente da confermare per iscritto",
+        "tipoValore": "dichiarazioniDaConfermare"
+      }
+    ],
+    "puntiApertiPrecompilati": [
+      {
+        "testo": "Richiesta al fornitore della curva quartoraria del POD (agosto–ottobre) e trasmissione al REDE (D16)",
+        "responsabile": "Cliente — amministrazione"
+      }
+    ],
+    "noteFisse": [
+      "Nessuna manovra su quadri o impianti è stata eseguita dal tecnico.",
+      "Le dichiarazioni verbali sono riportate come tali e non costituiscono documento fino a conferma scritta."
+    ],
+    "firme": [
+      {
+        "id": "FIRMA-CLIENTE",
+        "ruolo": "Per il Committente",
+        "parte": "committente",
+        "persona": "P1"
+      },
+      {
+        "id": "FIRMA-REDE",
+        "ruolo": "Il REDE",
+        "parte": "redattore",
+        "persona": "P3"
+      }
+    ]
+  },
+  "dopoSopralluogo": [
+    {
+      "testo": "Importare nella pratica il pacchetto di rientro con la skill sopralluogo-rientro-evidenze",
+      "entro": "sera stessa",
+      "priorita": "A"
+    },
+    {
+      "testo": "Sollecito scritto dei documenti promessi",
+      "entro": "7 giorni",
+      "priorita": "B"
+    }
+  ]
+}

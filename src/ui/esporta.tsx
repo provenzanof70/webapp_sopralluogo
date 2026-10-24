@@ -13,6 +13,29 @@ async function opzioniReport(bozza: boolean): Promise<OpzioniReport> {
   return { bozza, fotoPerPagina: await impostazione<1 | 2 | 4>('fotoPerPagina', 2), intestazione: await impostazione('intestazione', 'MC Studio Architettura e Design S.r.l.') };
 }
 
+/** Salva copia (checkpoint) o copia finale sigillata: genera, consegna il file, chiede conferma del salvataggio. */
+export async function esportaPacchetto(ses: Sessione, tipo: 'checkpoint' | 'finale', setLavoro: (t: string | null) => void): Promise<boolean> {
+  const st = ses.stato;
+  const firmeOk = (ses.struttura.verbale?.firme ?? []).every((f) => st.verbale.firme.some((x) => x.id === f.id));
+  if (tipo === 'finale' && !firmeOk && !(await conferma('Verbale non firmato da tutti', 'Salvare comunque la copia finale?', { ok: 'Salva' }))) return false;
+  setLavoro(tipo === 'finale' ? 'Preparo report e copia finale…' : 'Preparo la copia…');
+  try {
+    const report = await generaTuttiIReport(ses, await opzioniReport(false), tipo === 'checkpoint');
+    const p = await prova(async () => costruisciPacchetto(ses, tipo, report, await impostazione('sogliaVolumiMB', 400)));
+    if (!p) return false;
+    await prova(() => ses.registra('checkpoint.esportato', null, { nomeFile: p.volumi.map((v) => v.nome).join(' + '), tipo, aSeq: p.aSeq, hashFinale: p.hashFinale }));
+    setLavoro(null);
+    for (const [i, v] of p.volumi.entries()) {
+      if (p.volumi.length > 1) await messaggio(`Parte ${i + 1} di ${p.volumi.length}`, `Salva la parte «${v.nome}» (${Math.round(v.blob.size / 1048576)} MB). Servono tutte le parti.`);
+      const fatto = await consegnaFile(v.nome, v.blob, `Sopralluogo ${ses.struttura.pratica.codice}`);
+      if (!fatto) { avvisa('Annullato: nulla risulta salvato', true); return false; }
+    }
+    const salvato = await conferma('Hai salvato il file?', `Conferma solo se ${p.volumi.length > 1 ? 'tutte le parti sono state salvate' : `«${p.volumi[0].nome}» è stato salvato`} su OneDrive o in File. Fino alla conferma le modifiche risultano da salvare.`, { ok: 'Sì, salvato', annulla: 'No' });
+    if (salvato) await prova(() => ses.registra('checkpoint.confermato', null, { nomeFile: p.volumi.map((v) => v.nome).join(' + '), aSeq: p.aSeq, hashFinale: p.hashFinale, evidenze: p.evidenzeIncluse, nSostanziali: p.nSostanziali }), tipo === 'finale' ? 'Copia finale salvata' : 'Copia salvata');
+    return !!salvato;
+  } finally { setLavoro(null); }
+}
+
 export function VistaEsporta({ ses }: { ses: Sessione }) {
   const st = ses.stato;
   const [lavoro, setLavoro] = useState<string | null>(null);
@@ -22,25 +45,7 @@ export function VistaEsporta({ ses }: { ses: Sessione }) {
   const byteNuovi = nuoveEv.reduce((a, e) => a + (e.byte ?? 0), 0);
   const chiuso = st.statoSopralluogo === 'chiuso';
   const firmeOk = (ses.struttura.verbale?.firme ?? []).every((f) => st.verbale.firme.some((x) => x.id === f.id));
-
-  const esegui = async (tipo: 'checkpoint' | 'finale') => {
-    if (tipo === 'finale' && !firmeOk && !(await conferma('Verbale non firmato da tutti', 'Esportare comunque il pacchetto finale?', { ok: 'Esporta' }))) return;
-    setLavoro(tipo === 'finale' ? 'Genero report e pacchetto finale…' : 'Preparo il checkpoint…');
-    try {
-      const report = await generaTuttiIReport(ses, await opzioniReport(false), tipo === 'checkpoint');
-      const p = await prova(async () => costruisciPacchetto(ses, tipo, report, await impostazione('sogliaVolumiMB', 400)));
-      if (!p) return;
-      await prova(() => ses.registra('checkpoint.esportato', null, { nomeFile: p.volumi.map((v) => v.nome).join(' + '), tipo, aSeq: p.aSeq, hashFinale: p.hashFinale }));
-      setLavoro(null);
-      for (const [i, v] of p.volumi.entries()) {
-        if (p.volumi.length > 1) await messaggio(`Volume ${i + 1} di ${p.volumi.length}`, `Salva il volume «${v.nome}» (${Math.round(v.blob.size / 1048576)} MB). Servono tutti i volumi.`);
-        const fatto = await consegnaFile(v.nome, v.blob, `Sopralluogo ${ses.struttura.pratica.codice}`);
-        if (!fatto) { avvisa('Esportazione annullata: nulla risulta salvato', true); return; }
-      }
-      const salvato = await conferma('Hai salvato il file?', `Conferma solo se ${p.volumi.length > 1 ? 'tutti i volumi sono stati salvati' : `«${p.volumi[0].nome}» è stato salvato`} su OneDrive o in File. Fino alla conferma le modifiche risultano non esportate.`, { ok: 'Sì, salvato', annulla: 'No' });
-      if (salvato) await prova(() => ses.registra('checkpoint.confermato', null, { nomeFile: p.volumi.map((v) => v.nome).join(' + '), aSeq: p.aSeq, hashFinale: p.hashFinale, evidenze: p.evidenzeIncluse, nSostanziali: p.nSostanziali }), tipo === 'finale' ? 'Pacchetto finale salvato' : 'Checkpoint salvato');
-    } finally { setLavoro(null); }
-  };
+  const esegui = (tipo: 'checkpoint' | 'finale') => esportaPacchetto(ses, tipo, setLavoro);
 
   const bozza = async (nome: string, f: () => Promise<Uint8Array>, tipo: string) => {
     setLavoro(`Genero ${nome}…`);
@@ -51,20 +56,19 @@ export function VistaEsporta({ ses }: { ses: Sessione }) {
   };
 
   return <>
-    <h1>Esporta</h1>
+    <h1>Salva copia</h1>
     <div class="card">
-      <p>Registro: <b>{ses.istanza.aSeq}</b> eventi · modifiche non esportate: <b>{nonEsp}</b><br />
-        Evidenze non ancora esportate: <b>{nuoveEv.length}</b> ({Math.round(byteNuovi / 1048576 * 10) / 10} MB)<br />
-        Ultimo salvataggio confermato: {ultimo ? `${dataOra(ultimo.il)} — ${ultimo.nomeFile}` : 'nessuno'}</p>
-      <button class="btn pri larga" disabled={!!lavoro} onClick={() => esegui('checkpoint')}>⇪ Checkpoint (solo le novità)</button>
-      <p class="piccolo tenue">Salvalo nella cartella OneDrive della pratica. Con il pacchetto di andata e i checkpoint il sopralluogo si ricostruisce su un altro dispositivo.</p>
+      {nonEsp ? <p><b>{nonEsp} modifiche</b> e <b>{nuoveEv.length} file</b> ({Math.round(byteNuovi / 1048576 * 10) / 10} MB) da salvare.</p> : <p class="okbox">Tutto salvato.</p>}
+      <p class="piccolo tenue">Ultima copia: {ultimo ? `${dataOra(ultimo.il)} — ${ultimo.nomeFile}` : 'nessuna'}</p>
+      <button class="btn pri larga grande" disabled={!!lavoro} onClick={() => esegui('checkpoint')}>Salva copia (solo le novità)</button>
+      <p class="piccolo tenue">Mettila nella cartella OneDrive della pratica. Con lo ZIP di andata e le copie il sopralluogo si ricostruisce anche su un altro telefono.</p>
     </div>
     <div class="card">
-      <h3>Pacchetto finale</h3>
-      {!chiuso ? <p class="piccolo">Disponibile dopo la chiusura del sopralluogo (Altro → Verbale e chiusura).</p> : <>
+      <h3>Copia finale sigillata</h3>
+      {!chiuso ? <p class="piccolo">Si fa alla fine: Menu › Fine sopralluogo.</p> : <>
         {!firmeOk && <p class="avviso piccolo">Il verbale non è ancora firmato da tutti.</p>}
         <p class="piccolo">Contiene tutte le evidenze, il registro, verbale, report dettagliato, report sintetico per il cliente, fascicolo fotografico, tabelle CSV, con impronte e sigillo.</p>
-        <button class="btn ok larga" disabled={!!lavoro} onClick={() => esegui('finale')}>Esporta il pacchetto finale sigillato</button>
+        <button class="btn ok larga" disabled={!!lavoro} onClick={() => esegui('finale')}>Salva la copia finale sigillata</button>
       </>}
     </div>
     <div class="card">

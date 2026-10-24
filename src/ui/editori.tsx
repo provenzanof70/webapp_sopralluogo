@@ -1,17 +1,18 @@
 // Scheda di un elemento della struttura: intestazione + editor specifico per tipo.
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import type { Sessione } from '../archivio/sessione';
 import type {
   Elemento, ElVerifica, ElDomanda, ElFoto, ElLettura, ElMisura, ElDocumento, ElAnomalia, ElProtocollo, ElUscitaArea, Esito, DatoAtti, Momento,
 } from '../dominio/tipi';
-import { statoElemento, statoLista, statoCodice, apertiA, contaModificheNonEsportate } from '../dominio/completezza';
+import { statoElemento, statoLista, statoCodice, contaModificheNonEsportate } from '../dominio/completezza';
 import { momentiAttesi } from '../dominio/stato';
-import { Pr, Badge, InputSalva, prova, chiedi, motivo, conferma, parseNumero, avvisa, vai } from './comuni';
+import { Badge, InputSalva, prova, chiedi, motivo, conferma, parseNumero, vai } from './comuni';
 import { Cattura, Miniature } from './evidenze';
 import { EditorTabella } from './tabella';
 import { dataIt, dataOra, isoLocale, soloOra, numIt } from '../util/base';
 import { valoreFormattato, ETICHETTE_STATO_DOC } from '../report/contenuti';
 import { Firma } from './firma';
+import { NOMI_TIPO, titoloBreve, descrizione, sequenzaArea, Icona } from './voci';
 
 export function titoloElemento(el: Elemento): string {
   switch (el.tipo) {
@@ -26,51 +27,58 @@ export function titoloElemento(el: Elemento): string {
   }
 }
 
-const NOMI_TIPO: Record<Elemento['tipo'], string> = {
-  verifica: 'Verifica', domanda: 'Domanda', foto: 'Foto', lettura: 'Lettura', misura: 'Misura', documento: 'Documento',
-  anomalia: 'Anomalia', tabella: 'Tabella', protocollo: 'Protocollo', uscitaArea: 'Uscita area', informazione: 'Informazione',
-};
+let apertoOra: string | null = null;
+/** Codice della voce aperta nel pannello (per lo scatto rapido dalla barra). */
+export function elementoAperto() { return apertoOra; }
 
-export function SchedaElemento({ ses, el, aperta, onApri }: { ses: Sessione; el: Elemento; aperta: boolean; onApri: (v: boolean) => void }) {
-  const st = statoElemento(ses.struttura, ses.stato, el);
+/** Pannello di una voce: titolo breve, testo, azioni principali, «Altre azioni», navigazione Prec./Avanti. */
+export function Pannello({ ses, el, inline, onChiudi }: { ses: Sessione; el: Elemento; inline?: boolean; onChiudi: () => void }) {
   const e = ses.stato.esiti[el.id];
-  const nEv = (e?.evidenze ?? []).filter((id) => !ses.stato.evidenze[id]?.annullata).length;
-  return (
-    <div class={`el ${st}`} id={`el-${el.id}`}>
-      <button class="testa" onClick={() => onApri(!aperta)} aria-expanded={aperta}>
-        <Pr p={el.priorita} />
-        <div class="t">
-          <div><code><b>{el.id}</b></code> <span class="tenue piccolo">{NOMI_TIPO[el.tipo]}{el.riservato ? ' · riservato' : ''}</span></div>
-          <div style={aperta ? '' : 'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden'}>{titoloElemento(el)}</div>
-          {!aperta && <Riassunto ses={ses} el={el} e={e} />}
-        </div>
-        <div style="text-align:right"><Badge s={st} />{nEv > 0 && <div class="tenue piccolo">📎 {nEv}</div>}</div>
-      </button>
-      {aperta && <div class="corpo"><Editor ses={ses} el={el} e={e} /></div>}
+  const seq = sequenzaArea(ses, el.area);
+  const i = seq.findIndex((x) => x.id === el.id);
+  const prec = i > 0 ? seq[i - 1] : undefined;
+  const succ = i >= 0 && i < seq.length - 1 ? seq[i + 1] : undefined;
+  const vaiA = (x: Elemento) => vai('s', ses.istanza.id, 'a', x.area, x.id);
+  const avanti = () => (succ ? vaiA(succ) : vai('s', ses.istanza.id, 'chiudi', el.area));
+  useEffect(() => { apertoOra = el.id; return () => { apertoOra = null; }; }, [el.id]);
+  const desc = descrizione(el);
+  const corpo = useRef<HTMLDivElement>(null);
+  useEffect(() => { corpo.current?.scrollTo(0, 0); }, [el.id]);
+  return <section class={inline ? 'pannello inline' : 'pannello'} aria-label={`Voce ${el.id}`}>
+    {!inline && <div class="maniglia" />}
+    <div class="pn-testa">
+      {el.priorita === 'A' && <span class="pn-a">A</span>}
+      <span class="tenue piccolo">{NOMI_TIPO[el.tipo]}{el.riservato ? ' · riservato' : ''}</span>
+      <code class="pn-cod">{el.id}</code>
+      <span class="cresce" />
+      {!inline && <button class="pn-x" aria-label="Chiudi" onClick={onChiudi}><Icona n="chiudi" /></button>}
     </div>
-  );
-}
-
-function Riassunto({ el, e }: { ses: Sessione; el: Elemento; e?: Esito }) {
-  if (!e) return null;
-  let t = '';
-  if (el.tipo === 'domanda' && e.risposta) t = `→ ${e.risposta}`;
-  else if (el.tipo === 'verifica' && e.stato !== 'aperto') t = `${e.stato}${e.valoreRilevato != null ? ': ' + numIt(e.valoreRilevato) : ''}`;
-  else if (el.tipo === 'documento' && e.stato !== 'aperto') t = `${ETICHETTE_STATO_DOC[e.stato] ?? e.stato}${e.promessoEntro ? ' entro ' + dataIt(e.promessoEntro) : ''}`;
-  else if ((el.tipo === 'lettura' || el.tipo === 'misura') && e.valori?.length) t = e.valori.map((v) => `${v.momento === 'unica' ? '' : v.momento + ' '}${numIt(v.valore)}`).join(' · ');
-  else if (el.tipo === 'anomalia' && e.esito) t = `${e.stato}: ${e.esito}`;
-  return t ? <div class="tenue piccolo" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{t}</div> : null;
+    <div class="pn-corpo" ref={corpo}>
+      <h2 class="pn-tit">{titoloBreve(el)}</h2>
+      {desc && <p class="pn-desc">{desc}</p>}
+      {el.nota && <p class="piccolo tenue">{el.nota}</p>}
+      <Editor ses={ses} el={el} e={e} dopoConferma={avanti} />
+    </div>
+    <div class="pn-piede">
+      <button class="btn" disabled={!prec} onClick={() => prec && vaiA(prec)}><Icona n="indietro" d={18} /> Prec.</button>
+      <button class="btn pri cresce" onClick={avanti}>{succ ? <>Avanti: <span class="ellissi">{titoloBreve(succ)}</span></> : 'Fine area: chiudila'} <Icona n="avanti" d={18} /></button>
+    </div>
+  </section>;
 }
 
 function Atti({ d }: { d?: DatoAtti }) {
   if (!d) return null;
-  return <div class="atti">Agli atti: <b>{valoreFormattato(d.valore, d.unita)}</b>{d.classe ? ` · ${d.classe}` : ''}{d.origine ? ` (${d.origine})` : ''}{d.fonte ? ` · ${d.fonte}` : ''}{d.nota ? ` · ${d.nota}` : ''}</div>;
+  return <div class="atti-box">
+    <div class="atti-et">Agli atti</div>
+    <div class="atti-val">{valoreFormattato(d.valore, d.unita)}</div>
+    {(d.classe || d.origine || d.fonte || d.nota) && <div class="atti-fonte">{[d.classe && (d.origine ? `${d.classe} (${d.origine})` : d.classe), d.fonte, d.nota].filter(Boolean).join(' · ')}</div>}
+  </div>;
 }
 
 function Collegamenti({ ses, codici }: { ses: Sessione; codici?: string[] }) {
   if (!codici?.length) return null;
   return (
-    <div class="piccolo" style="margin:6px 0">Rimandi: {codici.map((c, i) => {
+    <div class="piccolo" style="margin:6px 0">Collegata a: {codici.map((c, i) => {
       const el = ses.struttura.elementi.find((x) => x.id === c);
       return <span key={c}>{i ? ', ' : ''}{el ? <a href={`#/s/${ses.istanza.id}/a/${el.area}/${c}`}>{c}</a> : <span class="tenue">{c}</span>}</span>;
     })}</div>
@@ -78,91 +86,109 @@ function Collegamenti({ ses, codici }: { ses: Sessione; codici?: string[] }) {
 }
 
 function NoteElemento({ ses, el, e }: { ses: Sessione; el: Elemento; e?: Esito }) {
-  return (
-    <details style="margin-top:8px">
-      <summary class="piccolo tenue">Note{e?.note || e?.notaInterna ? ' ✓' : ''}</summary>
-      <label class="campo"><span>Nota (può finire nei report)</span><InputSalva area valore={e?.note} onSalva={(v) => prova(() => ses.registra('esito.aggiornato', el.id, { campi: { note: v } }))} /></label>
-      <label class="campo"><span>Nota interna (mai nei report per il cliente)</span><InputSalva area valore={e?.notaInterna} onSalva={(v) => prova(() => ses.registra('esito.aggiornato', el.id, { campi: { notaInterna: v } }))} /></label>
-    </details>
-  );
+  return <>
+    <label class="campo"><span>Nota (può finire nei report)</span><InputSalva area valore={e?.note} onSalva={(v) => prova(() => ses.registra('esito.aggiornato', el.id, { campi: { note: v } }))} /></label>
+    <label class="campo"><span>Nota interna (mai nei report per il cliente)</span><InputSalva area valore={e?.notaInterna} onSalva={(v) => prova(() => ses.registra('esito.aggiornato', el.id, { campi: { notaInterna: v } }))} /></label>
+  </>;
 }
 
-function Deroga({ ses, el }: { ses: Sessione; el: Elemento }) {
+/** «Non fattibile oggi» (deroga): solo per le voci importanti non completate. */
+function NonFattibile({ ses, el }: { ses: Sessione; el: Elemento }) {
   const d = ses.stato.deroghe.find((x) => x.codice === el.id);
-  if (el.priorita !== 'A' || statoElemento(ses.struttura, ses.stato, el) === 'completo') return d ? <p class="piccolo tenue">Deroga registrata: {d.motivo}</p> : null;
-  return d ? (
-    <p class="piccolo" style="color:var(--deroga)">Deroga: {d.motivo} <button class="btn pic" onClick={() => prova(() => ses.registra('deroga.revocata', null, { codice: el.id }))}>Revoca</button></p>
-  ) : (
-    <button class="btn pic" style="margin-top:8px" onClick={async () => {
-      const m = await motivo(`Deroga per ${el.id}`, 'Voce di priorità A che non si può completare oggi. Il motivo resta nel pacchetto e nel report.');
-      if (m) await prova(() => ses.registra('deroga.registrata', null, { codice: el.id, motivo: m }), 'Deroga registrata');
-    }}>Non completabile: deroga…</button>
-  );
+  if (d) return <p class="avviso piccolo">Non fattibile oggi: {d.motivo} <button class="btn pic" onClick={() => prova(() => ses.registra('deroga.revocata', null, { codice: el.id }), 'Di nuovo da fare')}>Annulla</button></p>;
+  if (el.priorita !== 'A' || statoElemento(ses.struttura, ses.stato, el) === 'completo') return null;
+  return <button class="btn pic" onClick={async () => {
+    const m = await motivo('Non fattibile oggi', 'Perché non si può fare oggi? Il motivo resta nel verbale e nel report.');
+    if (m) await prova(() => ses.registra('deroga.registrata', null, { codice: el.id, motivo: m }), 'Segnata come non fattibile oggi');
+  }}>Non fattibile oggi…</button>;
 }
 
-function Editor({ ses, el, e }: { ses: Sessione; el: Elemento; e?: Esito }) {
-  const comuni = <>
-    <Collegamenti ses={ses} codici={el.rif} />
-    {el.nota && <p class="piccolo tenue">{el.nota}</p>}
-  </>;
-  const evid = <>
-    <Miniature ses={ses} ids={e?.evidenze} />
-    {el.tipo !== 'informazione' && el.tipo !== 'uscitaArea' && <Cattura ses={ses} elementi={[el.id]} area={el.area} tipoFoto={el.tipo === 'documento' ? 'documento' : 'foto'} />}
-  </>;
+function Editor({ ses, el, e, dopoConferma }: { ses: Sessione; el: Elemento; e?: Esito; dopoConferma: () => void }) {
+  const conFoto = el.tipo !== 'informazione' && el.tipo !== 'uscitaArea';
+  const tipoFoto = el.tipo === 'documento' ? 'documento' : 'foto';
+  const foto = conFoto ? <Cattura ses={ses} elementi={[el.id]} area={el.area} tipi={['foto']} tipoFoto={tipoFoto} grande /> : null;
+  const evid = <Miniature ses={ses} ids={e?.evidenze} />;
+  const altre = (extra?: preact.ComponentChildren) => <details class="altre">
+    <summary>Altre azioni</summary>
+    <div class="altre-corpo">
+      {extra}
+      {conFoto && <Cattura ses={ses} elementi={[el.id]} area={el.area} tipi={['galleria', 'file', 'audio', 'nota']} tipoFoto={tipoFoto} />}
+      <div class="gruppo-btn" style="margin-top:8px"><NonFattibile ses={ses} el={el} /></div>
+      <Collegamenti ses={ses} codici={el.rif} />
+      {el.tipo !== 'informazione' && <NoteElemento ses={ses} el={el} e={e} />}
+    </div>
+  </details>;
   switch (el.tipo) {
-    case 'verifica': return <>{comuni}<EdVerifica ses={ses} el={el} e={e} />{evid}<Deroga ses={ses} el={el} /><NoteElemento ses={ses} el={el} e={e} /></>;
-    case 'domanda': return <>{comuni}<EdDomanda ses={ses} el={el} e={e} />{evid}<Deroga ses={ses} el={el} /><NoteElemento ses={ses} el={el} e={e} /></>;
-    case 'foto': return <>{comuni}<EdFoto ses={ses} el={el} e={e} />{evid}<Deroga ses={ses} el={el} /><NoteElemento ses={ses} el={el} e={e} /></>;
-    case 'lettura': case 'misura': return <>{comuni}<EdValori ses={ses} el={el} e={e} />{evid}<Deroga ses={ses} el={el} /><NoteElemento ses={ses} el={el} e={e} /></>;
-    case 'documento': return <>{comuni}<EdDocumento ses={ses} el={el} e={e} />{evid}<Deroga ses={ses} el={el} /><NoteElemento ses={ses} el={el} e={e} /></>;
-    case 'anomalia': return <>{comuni}<EdAnomalia ses={ses} el={el} e={e} />{evid}<Deroga ses={ses} el={el} /><NoteElemento ses={ses} el={el} e={e} /></>;
-    case 'tabella': return <>{comuni}<EditorTabella ses={ses} el={el} e={e} />{evid}<Deroga ses={ses} el={el} /><NoteElemento ses={ses} el={el} e={e} /></>;
-    case 'protocollo': return <>{comuni}<EdProtocollo ses={ses} el={el} e={e} />{evid}<NoteElemento ses={ses} el={el} e={e} /></>;
+    case 'verifica': return <><EdVerifica ses={ses} el={el} e={e} foto={foto} dopoConferma={dopoConferma} />{evid}{altre(<AltreVerifica ses={ses} el={el} e={e} />)}</>;
+    case 'domanda': return <><EdDomanda ses={ses} el={el} e={e} />{foto}{evid}{altre(<AltreDomanda ses={ses} el={el} />)}</>;
+    case 'foto': return <><EdFoto ses={ses} el={el} e={e} />{foto}{evid}{altre(<button class="btn pic" onClick={async () => { const m = await motivo('Foto non disponibile'); if (m) reg(ses, el.id, { stato: 'nonDisponibile', motivo: m }); }}>Foto non disponibile…</button>)}</>;
+    case 'lettura': case 'misura': return <><EdValori ses={ses} el={el} e={e} />{foto}{evid}{altre(<button class="btn pic" onClick={async () => { const m = await motivo('Lettura/misura non eseguibile'); if (m) reg(ses, el.id, { stato: 'nonEseguibile', motivo: m }); }}>Non eseguibile…</button>)}</>;
+    case 'documento': return <><EdDocumento ses={ses} el={el} e={e} />{foto}{evid}{altre()}</>;
+    case 'anomalia': return <><EdAnomalia ses={ses} el={el} e={e} />{foto}{evid}{altre()}</>;
+    case 'tabella': return <><EditorTabella ses={ses} el={el} e={e} />{foto}{evid}{altre()}</>;
+    case 'protocollo': return <><EdProtocollo ses={ses} el={el} e={e} />{foto}{evid}{altre()}</>;
     case 'uscitaArea': return <EdUscita ses={ses} el={el} />;
-    case 'informazione': return <>{comuni}<p style="white-space:pre-wrap">{el.testo}</p>{el.figura && <a class="btn pic" href={`#/s/${ses.istanza.id}/figura/${el.figura}`}>Apri figura {el.figura}</a>}</>;
+    case 'informazione': return <>{descrizione(el) ? null : <p style="white-space:pre-wrap">{el.testo}</p>}{el.figura && <a class="btn pic" href={`#/s/${ses.istanza.id}/figura/${el.figura}`}>Apri la planimetria {el.figura}</a>}</>;
   }
 }
 
 const reg = (ses: Sessione, codice: string, campi: Partial<Esito>, ok?: string) => prova(() => ses.registra('esito.aggiornato', codice, { campi }), ok);
 
-function EdVerifica({ ses, el, e }: { ses: Sessione; el: ElVerifica; e?: Esito }) {
-  const scegli = async (stato: string) => {
-    if (stato === 'corretto' || stato === 'difforme') {
-      const r = await chiedi(stato === 'corretto' ? 'Correggi il dato agli atti' : 'Difformità riscontrata', [
-        { id: 'v', etichetta: 'Valore rilevato', valore: e?.valoreRilevato != null ? String(e.valoreRilevato) : '', obbligatorio: stato === 'corretto' },
-        { id: 'c', etichetta: 'Classe', tipo: 'scelta', scelte: Object.keys(ses.struttura.legenda?.classi ?? { M: '', F: '', S: '', D: '', R: '' }), valore: e?.classe ?? 'R' },
-        { id: 'f', etichetta: 'Fonte (targa, display, documento, dichiarazione di…)', valore: e?.fonte ?? '', obbligatorio: true },
-      ], { testo: 'Il valore agli atti resta registrato accanto a quello rilevato. Collega una foto come evidenza.' });
-      if (!r) return;
-      return reg(ses, el.id, { stato, valoreRilevato: parseNumero(r.v), classe: r.c, fonte: r.f }, 'Salvato');
-    }
-    if (stato === 'nonVerificabile' || stato === 'daIntegrare') {
-      const m = await motivo(stato === 'nonVerificabile' ? 'Non verificabile' : 'Da integrare');
-      if (m) return reg(ses, el.id, { stato, motivo: m }, 'Salvato');
-      return;
-    }
-    return reg(ses, el.id, { stato }, 'Confermato');
-  };
+const ESITI_VER: Record<string, string> = { confermato: 'Confermato', corretto: 'Corretto', difforme: 'Difforme', nonVerificabile: 'Non verificabile', daIntegrare: 'Da integrare' };
+
+async function scegliVerifica(ses: Sessione, el: ElVerifica, e: Esito | undefined, stato: string) {
+  if (stato === 'corretto' || stato === 'difforme') {
+    const r = await chiedi(stato === 'corretto' ? 'Correggo il dato agli atti' : 'Diverso da quanto previsto', [
+      { id: 'v', etichetta: 'Valore che vedo', valore: e?.valoreRilevato != null ? String(e.valoreRilevato) : '', obbligatorio: stato === 'corretto' },
+      { id: 'f', etichetta: 'Da dove lo leggo (targa, display, documento, detto da…)', valore: e?.fonte ?? '', obbligatorio: true },
+      { id: 'c', etichetta: 'Classe', tipo: 'scelta', scelte: Object.keys(ses.struttura.legenda?.classi ?? { M: '', F: '', S: '', D: '', R: '' }), valore: e?.classe ?? 'R' },
+    ], { testo: 'Il valore agli atti resta registrato accanto a quello nuovo. Fai una foto come prova.' });
+    if (!r) return false;
+    await reg(ses, el.id, { stato, valoreRilevato: parseNumero(r.v), classe: r.c, fonte: r.f }, 'Salvato');
+    return true;
+  }
+  if (stato === 'nonVerificabile' || stato === 'daIntegrare') {
+    const m = await motivo(stato === 'nonVerificabile' ? 'Non verificabile' : 'Da integrare');
+    if (m) { await reg(ses, el.id, { stato, motivo: m }, 'Salvato'); return true; }
+    return false;
+  }
+  await reg(ses, el.id, { stato }, 'Confermato');
+  return true;
+}
+
+function EdVerifica({ ses, el, e, foto, dopoConferma }: { ses: Sessione; el: ElVerifica; e?: Esito; foto: preact.ComponentChildren; dopoConferma: () => void }) {
+  const fatta = e && e.stato !== 'aperto';
   return <>
-    <p style="white-space:pre-wrap;margin:6px 0">{el.testo}</p>
     <Atti d={el.agliAtti} />
-    {e && e.stato !== 'aperto' && <p class="okbox piccolo">Esito: <b>{e.stato}</b>{e.valoreRilevato != null ? ` — rilevato ${numIt(e.valoreRilevato)}` : ''}{e.classe ? ` (${e.classe})` : ''}{e.fonte ? ` · ${e.fonte}` : ''}{e.motivo ? ` · ${e.motivo}` : ''} · {soloOra(e.aggiornatoIl)}</p>}
-    <div class="gruppo-btn">
-      <button class="btn pic ok" onClick={() => scegli('confermato')}>{el.agliAtti ? 'Confermo agli atti' : 'Verificato'}</button>
-      {el.agliAtti && <button class="btn pic" onClick={() => scegli('corretto')}>Correggo</button>}
-      <button class="btn pic" onClick={() => scegli('difforme')}>Difforme</button>
-      <button class="btn pic" onClick={() => scegli('nonVerificabile')}>Non verificabile</button>
-      <button class="btn pic" onClick={() => scegli('daIntegrare')}>Da integrare</button>
-      {e && e.stato !== 'aperto' && <button class="btn pic" onClick={() => reg(ses, el.id, { stato: 'aperto' })}>Riapri</button>}
+    {fatta && <p class="okbox piccolo"><b>{ESITI_VER[e.stato] ?? e.stato}</b>{e.valoreRilevato != null ? ` — ${numIt(e.valoreRilevato)}` : ''}{e.fonte ? ` · ${e.fonte}` : ''}{e.motivo ? ` · ${e.motivo}` : ''} · alle {soloOra(e.aggiornatoIl)}
+      {' '}<button class="btn pic" onClick={() => reg(ses, el.id, { stato: 'aperto' }, 'Di nuovo da fare')}>Rifai</button></p>}
+    {!fatta && <button class="btn ok grande larga" onClick={async () => { if (await scegliVerifica(ses, el, e, 'confermato')) dopoConferma(); }}><Icona n="ok" s={2.6} />{el.agliAtti ? 'Confermo' : 'Verificato, è così'}</button>}
+    <div class="due">
+      <button class="btn" onClick={() => scegliVerifica(ses, el, e, el.agliAtti ? 'corretto' : 'difforme')}>{el.agliAtti ? 'Correggo…' : 'Non è così…'}</button>
+      {foto}
     </div>
   </>;
+}
+
+function AltreVerifica({ ses, el, e }: { ses: Sessione; el: ElVerifica; e?: Esito }) {
+  return <div class="gruppo-btn">
+    {el.agliAtti && <button class="btn pic" onClick={() => scegliVerifica(ses, el, e, 'difforme')}>Diverso da quanto previsto…</button>}
+    <button class="btn pic" onClick={() => scegliVerifica(ses, el, e, 'nonVerificabile')}>Non verificabile…</button>
+    <button class="btn pic" onClick={() => scegliVerifica(ses, el, e, 'daIntegrare')}>Da integrare…</button>
+  </div>;
+}
+
+function AltreDomanda({ ses, el }: { ses: Sessione; el: ElDomanda }) {
+  return <div class="gruppo-btn">
+    <button class="btn pic" onClick={async () => { const m = await motivo('Nessuna risposta'); if (m) reg(ses, el.id, { stato: 'nonRisposta', motivo: m, note: m }); }}>Nessuna risposta…</button>
+    <button class="btn pic" onClick={async () => { const m = await motivo('Rinviata (a chi, entro quando)'); if (m) reg(ses, el.id, { stato: 'rinviata', note: m }); }}>Rinviata…</button>
+  </div>;
 }
 
 function EdDomanda({ ses, el, e }: { ses: Sessione; el: ElDomanda; e?: Esito }) {
   const presenti = Object.values(ses.stato.presenti).filter((p) => p.presente);
   const dest = ses.struttura.persone?.find((p) => p.id === el.destinatario);
   return <>
-    <p style="white-space:pre-wrap;margin:6px 0;font-weight:600">{el.testo}</p>
     <p class="piccolo tenue">A chi: {dest ? `${dest.nome}${dest.ruolo ? ' (' + dest.ruolo + ')' : ''}` : el.destinatario ?? '—'}{el.perche ? ` · Perché: ${el.perche}` : ''}</p>
     {el.temaSensibile && <p class="avviso piccolo">Tema sensibile: porre la domanda in forma tecnica e neutra.</p>}
     <label class="campo"><span>Risposta (detta con il microfono della tastiera)</span>
@@ -181,13 +207,9 @@ function EdDomanda({ ses, el, e }: { ses: Sessione; el: ElDomanda; e?: Esito }) 
       </select>
     </label>
     <div class="gruppo-btn">
-      <button class={`btn pic ${e?.provenienza === 'R' ? 'sel' : ''}`} onClick={() => reg(ses, el.id, { provenienza: 'R', daConfermarePerIscritto: false })}>R riscontrato</button>
-      <button class={`btn pic ${(e?.provenienza ?? 'D') === 'D' && e ? 'sel' : ''}`} onClick={() => reg(ses, el.id, { provenienza: 'D', daConfermarePerIscritto: true })}>D dichiarato</button>
+      <button class={`btn pic ${e?.provenienza === 'R' ? 'sel' : ''}`} onClick={() => reg(ses, el.id, { provenienza: 'R', daConfermarePerIscritto: false })}>Riscontrato (visto)</button>
+      <button class={`btn pic ${(e?.provenienza ?? 'D') === 'D' && e ? 'sel' : ''}`} onClick={() => reg(ses, el.id, { provenienza: 'D', daConfermarePerIscritto: true })}>Dichiarato (detto)</button>
       <label class="riga piccolo"><input type="checkbox" checked={!!e?.daConfermarePerIscritto} onChange={(x) => reg(ses, el.id, { daConfermarePerIscritto: x.currentTarget.checked })} /> da confermare per iscritto</label>
-    </div>
-    <div class="gruppo-btn" style="margin-top:6px">
-      <button class="btn pic" onClick={async () => { const m = await motivo('Nessuna risposta'); if (m) reg(ses, el.id, { stato: 'nonRisposta', motivo: m, note: m }); }}>Nessuna risposta</button>
-      <button class="btn pic" onClick={async () => { const m = await motivo('Rinviata (a chi, entro quando)'); if (m) reg(ses, el.id, { stato: 'rinviata', note: m }); }}>Rinviata</button>
     </div>
   </>;
 }
@@ -195,12 +217,10 @@ function EdDomanda({ ses, el, e }: { ses: Sessione; el: ElDomanda; e?: Esito }) 
 function EdFoto({ ses, el, e }: { ses: Sessione; el: ElFoto; e?: Esito }) {
   const n = (e?.evidenze ?? []).filter((id) => !ses.stato.evidenze[id]?.annullata).length;
   return <>
-    <p style="margin:6px 0;font-weight:600">{el.oggetto}</p>
     {el.leggibile && <p class="piccolo">Deve essere leggibile: <b>{el.leggibile}</b></p>}
     {el.serveA && <p class="piccolo tenue">Serve a: {el.serveA}</p>}
-    <p class="piccolo">Scatti: <b>{n}</b> / {el.scattiMinimi ?? 2} (insieme + dettaglio)</p>
+    <p class="piccolo">Scatti: <b>{n}</b> di {el.scattiMinimi ?? 2} (una d'insieme + un dettaglio)</p>
     {e?.stato === 'nonDisponibile' && <p class="avviso piccolo">Non disponibile: {e.motivo}</p>}
-    <button class="btn pic" onClick={async () => { const m = await motivo('Foto non disponibile'); if (m) reg(ses, el.id, { stato: 'nonDisponibile', motivo: m }); }}>Non disponibile…</button>
   </>;
 }
 
@@ -221,10 +241,10 @@ function EdValori({ ses, el, e }: { ses: Sessione; el: ElLettura | ElMisura; e?:
     await prova(() => ses.registra('valore.registrato', el.id, { lista: [{ ...v, il, oraCorretta: { da: v.oraCorretta?.da ?? v.il, motivo: x.m } }] }), 'Ora corretta');
   };
   return <>
-    {el.tipo === 'lettura' ? <p style="margin:6px 0;font-weight:600">{el.strumento}{el.dove ? <span class="tenue"> — {el.dove}</span> : null}</p>
-      : <p style="margin:6px 0;font-weight:600">{el.cosa} <span class="tenue">— {el.strumento}{el.indicativa ? ' (valore indicativo)' : ''}</span></p>}
+    {el.tipo === 'lettura' ? (el.dove ? <p class="piccolo tenue">Dove: {el.dove}</p> : null)
+      : <p class="piccolo tenue">Strumento: {el.strumento}{el.indicativa ? ' (valore indicativo)' : ''}</p>}
     {el.tipo === 'lettura' && <Atti d={el.agliAtti} />}
-    {el.tipo === 'lettura' && el.gruppo && <p class="piccolo">Gruppo «{el.gruppo}»: <a href={`#/s/${ses.istanza.id}/contemporanee/${encodeURIComponent(el.gruppo)}`}>letture contemporanee →</a></p>}
+    {el.tipo === 'lettura' && el.gruppo && <a class="btn pic" href={`#/s/${ses.istanza.id}/contemporanee/${encodeURIComponent(el.gruppo)}`}>Fai tutte le letture insieme («{el.gruppo}») ›</a>}
     {el.tipo === 'misura' && el.perche && <p class="piccolo tenue">Perché: {el.perche}</p>}
     {momenti.map((m) => (
       <div key={m} style="margin-top:8px">
@@ -244,7 +264,6 @@ function EdValori({ ses, el, e }: { ses: Sessione; el: ElLettura | ElMisura; e?:
     {el.tipo === 'lettura' && momentiAttesi(el).includes('arrivo') && momentiAttesi(el).includes('partenza') && <Delta el={el} e={e} />}
     {el.tipo === 'lettura' && el.controlloCoerenza && <p class="piccolo atti">Controllo di coerenza: {el.controlloCoerenza}</p>}
     {el.tipo === 'misura' && <label class="campo"><span>Strumento usato (marca, modello)</span><InputSalva valore={e?.strumentoUsato ?? ''} placeholder={el.strumento} onSalva={(v) => prova(() => ses.registra('valore.registrato', el.id, { lista: [], strumentoUsato: v }))} /></label>}
-    <button class="btn pic" style="margin-top:6px" onClick={async () => { const m = await motivo('Lettura/misura non eseguibile'); if (m) reg(ses, el.id, { stato: 'nonEseguibile', motivo: m }); }}>Non eseguibile…</button>
   </>;
 }
 
@@ -274,20 +293,18 @@ function EdDocumento({ ses, el, e }: { ses: Sessione; el: ElDocumento; e?: Esito
     await reg(ses, el.id, { stato }, 'Salvato');
   };
   return <>
-    <p style="margin:6px 0;font-weight:600">{el.documento}</p>
     <p class="piccolo tenue">Da: {el.daChi ?? '—'}{el.perche ? ` · Perché: ${el.perche}` : ''}{el.daPreparareInGiornata ? ' · da chiedere in apertura' : ''}</p>
     {e && e.stato !== 'aperto' && <p class="okbox piccolo">{ETICHETTE_STATO_DOC[e.stato]}{e.promessoEntro ? ` entro ${dataIt(e.promessoEntro)}` : ''}{e.chiLoInvia ? ` — ${e.chiLoInvia}` : ''}{e.motivo ? ` — ${e.motivo}` : ''}</p>}
     <div class="gruppo-btn">
       {(['ritiratoOriginale', 'ritiratoCopia', 'fotografato', 'promesso', 'nonDisponibile'] as const).map((s) =>
         <button class={`btn pic ${e?.stato === s ? 'sel' : ''}`} onClick={() => scegli(s)}>{ETICHETTE_STATO_DOC[s]}</button>)}
     </div>
-    <p class="piccolo tenue">Fotografa le pagine con «📷 Scatta»: restano copie acquisite in sopralluogo, il documento resta da ricevere dal cliente.</p>
+    <p class="piccolo tenue">Le foto delle pagine restano copie acquisite in sopralluogo: il documento resta da ricevere dal cliente.</p>
   </>;
 }
 
 function EdAnomalia({ ses, el, e }: { ses: Sessione; el: ElAnomalia; e?: Esito }) {
   return <>
-    <p style="margin:6px 0;font-weight:600">{el.tema}</p>
     <div class="atti">Agli atti: {el.datoAtti}</div>
     {el.evidenzaDaRaccogliere && <p class="piccolo">Evidenza da raccogliere: {el.evidenzaDaRaccogliere}</p>}
     {el.doveSiVerifica?.length ? <div class="piccolo" style="margin:6px 0">Dove si verifica: {el.doveSiVerifica.map((c) => {
@@ -309,7 +326,6 @@ function EdProtocollo({ ses, el, e }: { ses: Sessione; el: ElProtocollo; e?: Esi
   const [firma, setFirma] = useState(false);
   const presenti = Object.values(ses.stato.presenti).filter((p) => p.presente);
   return <>
-    <p style="margin:6px 0;font-weight:600">{el.titolo}</p>
     {el.scopo && <p class="piccolo tenue">{el.scopo}</p>}
     {el.regole?.length ? <ul class="piccolo">{el.regole.map((r) => <li>{r}</li>)}</ul> : null}
     {el.daLasciareAlCliente && <p class="avviso piccolo">Protocollo da lasciare al cliente: si registra quando torna il foglio compilato.</p>}
@@ -358,25 +374,10 @@ function EdUscita({ ses, el }: { ses: Sessione; el: ElUscitaArea }) {
   </>;
 }
 
-export async function chiudiArea(ses: Sessione, area: string) {
-  const aperti = apertiA(ses.struttura, ses.stato, area);
-  if (!aperti.length) {
-    await prova(() => ses.registra('area.chiusa', null, { area, conDeroga: false }), 'Area chiusa');
-    return suggerisciCheckpoint(ses);
-  }
-  const ok = await conferma('Voci di priorità A ancora aperte', aperti.map((e) => `${e.id} — ${titoloElemento(e).slice(0, 80)}`).join('\n') + '\n\nChiudere con deroga? Ti chiederò un motivo per ciascuna.', { ok: 'Chiudi con deroga', annulla: 'Torno all\'area' });
-  if (!ok) return;
-  for (const e of aperti) {
-    const m = await motivo(`Deroga ${e.id}`, titoloElemento(e));
-    if (!m) { avvisa('Chiusura interrotta: area ancora aperta'); return; }
-    await prova(() => ses.registra('deroga.registrata', null, { codice: e.id, motivo: m }));
-  }
-  await prova(() => ses.registra('area.chiusa', null, { area, conDeroga: true }), 'Area chiusa con deroga');
-  return suggerisciCheckpoint(ses);
-}
+export function chiudiArea(ses: Sessione, area: string) { vai('s', ses.istanza.id, 'chiudi', area); }
 
-async function suggerisciCheckpoint(ses: Sessione) {
-  if (contaModificheNonEsportate(ses.istanza.aSeq, ses.stato) > 5 && await conferma('Checkpoint consigliato', 'Hai chiuso un\'area: salva ora un checkpoint su OneDrive, così niente si perde anche se il telefono si rompe.', { ok: 'Fai il checkpoint', annulla: 'Più tardi' })) {
+export async function suggerisciCheckpoint(ses: Sessione) {
+  if (contaModificheNonEsportate(ses.istanza.aSeq, ses.stato) > 5 && await conferma('Salva una copia', 'Hai chiuso un\'area: salva ora una copia su OneDrive, così niente si perde anche se il telefono si rompe.', { ok: 'Salva copia', annulla: 'Più tardi' })) {
     vai('s', ses.istanza.id, 'esporta');
   }
 }

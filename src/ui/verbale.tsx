@@ -2,10 +2,8 @@
 import { useEffect, useState } from 'preact/hooks';
 import type { Sessione } from '../archivio/sessione';
 import { contenutoVerbale, testoPerFirma } from '../report/contenuti';
-import { apertiA } from '../dominio/completezza';
-import { prova, chiedi, conferma, motivo, InputSalva, vai, avvisa } from './comuni';
+import { prova, chiedi, conferma, InputSalva } from './comuni';
 import { Firma } from './firma';
-import { titoloElemento } from './editori';
 import { sha256, dataOra } from '../util/base';
 
 export function VistaVerbale({ ses }: { ses: Sessione }) {
@@ -23,29 +21,9 @@ export function VistaVerbale({ ses }: { ses: Sessione }) {
     if (st.verbale.firme.length) await prova(() => ses.registra('firme.invalidate', null));
     return true;
   };
-  const chiudi = async () => {
-    const aperti = apertiA(s, st);
-    if (aperti.length) {
-      const ok = await conferma(`${aperti.length} voci di priorità A aperte`, aperti.slice(0, 25).map((e) => `${e.id} (${e.area}) — ${titoloElemento(e).slice(0, 70)}`).join('\n') + (aperti.length > 25 ? '\n…' : '') + '\n\nPer chiudere serve un motivo (deroga) per ciascuna. Procedere?', { ok: 'Registra le deroghe', annulla: 'Torno al giro' });
-      if (!ok) return vai('s', ses.istanza.id, 'manca');
-      for (const e of aperti) {
-        const m = await motivo(`Deroga ${e.id}`, titoloElemento(e));
-        if (!m) { avvisa('Chiusura interrotta'); return; }
-        await prova(() => ses.registra('deroga.registrata', null, { codice: e.id, motivo: m }));
-      }
-    }
-    const letturePartenza = s.elementi.filter((e) => e.tipo === 'lettura' && e.momenti.includes('partenza') && !st.esiti[e.id]?.valori?.some((v) => v.momento === 'partenza'));
-    if (letturePartenza.length && !(await conferma('Letture alla partenza mancanti', letturePartenza.map((e) => e.id).join(', ') + '\nChiudere comunque?', { ok: 'Chiudi comunque', annulla: 'Le faccio ora' }))) {
-      const g = letturePartenza.find((e) => e.tipo === 'lettura' && e.gruppo);
-      if (g && g.tipo === 'lettura') vai('s', ses.istanza.id, 'contemporanee', g.gruppo!);
-      return;
-    }
-    if (!(await conferma('Chiudere il sopralluogo?', 'Si registra l\'ora di fine. Poi si raccolgono le firme sul verbale e si esporta il pacchetto finale.'))) return;
-    await prova(() => ses.registra('sopralluogo.chiuso', null), 'Sopralluogo chiuso');
-  };
   return <>
     <h1>{c.titolo}</h1>
-    {!chiuso && <div class="avviso">Il verbale si firma dopo la chiusura del sopralluogo (l'ora di fine fa parte del testo firmato). <button class="btn pic pri" onClick={chiudi}>Chiudi il sopralluogo</button></div>}
+    {!chiuso && <div class="avviso">Il verbale si firma dopo la chiusura del sopralluogo (l'ora di fine fa parte del testo firmato). <a class="btn pic pri" href={`#/s/${ses.istanza.id}/fine`}>Vai a Fine sopralluogo</a></div>}
     {nonValide.length > 0 && <div class="errore">Il verbale è cambiato dopo la firma di {nonValide.map((f) => f.nome).join(', ')}: le firme vanno ripetute.
       <button class="btn pic" onClick={() => prova(() => ses.registra('firme.invalidate', null))}>Azzera le firme</button></div>}
     <div class="card">
@@ -85,7 +63,7 @@ export function VistaVerbale({ ses }: { ses: Sessione }) {
       })}
       <p class="piccolo tenue">Firma elettronica semplice. Se preferisci il verbale cartaceo, fotografalo firmato e allegalo come documento.</p>
     </div>
-    {chiuso && st.verbale.firme.length >= previste.length && !nonValide.length && <a class="btn ok larga" href={`#/s/${ses.istanza.id}/esporta`}>Firme complete: esporta il pacchetto finale →</a>}
+    {chiuso && st.verbale.firme.length >= previste.length && !nonValide.length && <a class="btn ok larga" href={`#/s/${ses.istanza.id}/fine`}>Firme complete: salva la copia finale →</a>}
     {firmaDi && (() => {
       const f = previste.find((x) => x.id === firmaDi)!;
       const persona = s.persone?.find((p) => p.id === f.persona);

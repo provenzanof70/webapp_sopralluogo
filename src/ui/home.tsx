@@ -51,34 +51,55 @@ export function Home() {
   if (rip) return <AnteprimaRipristino a={rip} onAnnulla={() => setRip(null)} />;
 
   return <div class="app">
-    <div class="barra"><div class="tit"><b>Sopralluogo MC Studio</b><small>v{VERSIONE_APP} · build {BUILD_APP} UTC</small></div><button onClick={() => vai('impostazioni')}>⚙</button></div>
+    <div class="barra"><div class="tit"><b>Sopralluoghi</b><small>MC Studio · v{VERSIONE_APP}</small></div><button onClick={() => vai('impostazioni')} aria-label="Impostazioni">⚙</button></div>
     <div class="contenuto">
       <StatoDispositivo />
       <input ref={inImp} type="file" accept=".zip,.json,application/zip,application/json" class="nascosto" onChange={(e) => { const f = e.currentTarget.files?.[0]; e.currentTarget.value = ''; if (f) importa(f); }} />
       <input ref={inRip} type="file" accept=".zip,application/zip" multiple class="nascosto" onChange={(e) => { const f = e.currentTarget.files; if (f?.length) ripristina(f); e.currentTarget.value = ''; }} />
-      <div class="griglia2">
-        <button class="btn pri" onClick={() => inImp.current?.click()}>Importa pacchetto di andata</button>
-        <button class="btn" onClick={() => inRip.current?.click()}>Ripristina da pacchetti di rientro</button>
-      </div>
       {occupato && <p class="tenue">{occupato}</p>}
       {errore && <div class="errore"><b>{errore.msg}</b>{errore.dettagli.length > 0 && <ul class="piccolo">{errore.dettagli.slice(0, 30).map((d) => <li>{d}</li>)}</ul>}</div>}
-      <h2>Sopralluoghi su questo dispositivo</h2>
-      {istanze === null ? <p class="tenue">…</p> : !istanze.length ? <p class="tenue">Nessuno. Importa il pacchetto di andata generato nel progetto della pratica (SOPRALLUOGO_…_ANDATA_….zip).</p> : (
-        <div class="card" style="padding:0">{istanze.map((i) => <div class="voce-lista" style="display:block">
-          <a href={`#/s/${i.id}`} style="color:inherit;text-decoration:none;display:block">
-            <div class="riga"><b class="cresce">{i.codicePratica} · {i.committente}</b><span class={`badge ${i.statoSopralluogo === 'chiuso' ? 'completo' : i.statoSopralluogo === 'inCorso' ? 'parziale' : 'aperto'}`}>{i.statoSopralluogo === 'inCorso' ? 'in corso' : i.statoSopralluogo}</span></div>
-            <div class="piccolo tenue">{i.sito} · {dataIt(i.data)} · {i.revisione}{i.origine?.startsWith('ripristino') ? ' · ripristinato' : ''}</div>
-            <div class="piccolo">{i.nonEsp ? <span style="color:var(--avviso)">{i.nonEsp} modifiche non esportate</span> : <span class="tenue">tutto esportato</span>}{i.archiviata ? ' · archiviato' : ''}</div>
-          </a>
-          <div class="riga" style="margin-top:6px;justify-content:flex-end">
-            <button class="btn pic" onClick={async () => { const n = await chiediRipartenza(i); if (n) vai('s', n); }}>Ricomincia da zero</button>
-            <button class="btn pic per" onClick={async () => { if (await chiediEliminazione(i)) ricarica(); }}>Elimina</button>
+      {istanze === null ? <p class="tenue">…</p> : !istanze.length ? <div class="card evidente">
+        <h2 style="margin-top:0">Nessun sopralluogo</h2>
+        <p class="piccolo">Carica lo ZIP di andata preparato nel progetto della pratica (SOPRALLUOGO_…_ANDATA_….zip).</p>
+        <button class="btn pri larga grande" onClick={() => inImp.current?.click()}>Carica una pratica (ZIP)</button>
+      </div> : (() => {
+        const oggi = new Date().toISOString().slice(0, 10);
+        const pross = istanze.find((i) => i.statoSopralluogo === 'inCorso')
+          ?? [...istanze].filter((i) => i.statoSopralluogo === 'preparazione' && i.data >= oggi).sort((x, y) => x.data.localeCompare(y.data))[0]
+          ?? istanze[0];
+        const altri = istanze.filter((i) => i !== pross);
+        return <>
+          <div class="card evidente">
+            <div class="et-sez">{pross.statoSopralluogo === 'inCorso' ? 'In corso' : pross.statoSopralluogo === 'chiuso' ? 'Ultimo' : 'Prossimo'}</div>
+            <h2 style="margin:4px 0 2px">{pross.codicePratica} · {pross.committente}</h2>
+            <p class="piccolo tenue" style="margin:0 0 12px">{pross.sito} · {dataIt(pross.data)} · {pross.revisione}{pross.nonEsp ? <span style="color:var(--avviso);font-weight:600"> · da salvare</span> : null}</p>
+            <a class="btn pri larga grande" href={`#/s/${pross.id}`}>{pross.statoSopralluogo === 'inCorso' ? 'Continua il sopralluogo' : pross.statoSopralluogo === 'chiuso' ? 'Apri' : 'Apri e prepara'}</a>
+            <Gestisci i={pross} ricarica={ricarica} />
           </div>
-        </div>)}</div>
-      )}
+          {altri.length > 0 && <><div class="gruppo-tit">Altri sopralluoghi</div>
+            <div class="card" style="padding:0">{altri.map((i) => <div class="voce-lista" style="display:block">
+              <a href={`#/s/${i.id}`} style="color:inherit;text-decoration:none;display:block">
+                <div class="riga" style="flex-wrap:nowrap"><b class="cresce ellissi">{i.codicePratica} · {i.committente}</b><span class="piccolo tenue">{i.statoSopralluogo === 'inCorso' ? 'in corso' : i.statoSopralluogo === 'chiuso' ? 'chiuso' : dataIt(i.data)}</span></div>
+                <div class="piccolo tenue">{i.sito} · {i.revisione}{i.nonEsp ? <span style="color:var(--avviso)"> · da salvare</span> : null}</div>
+              </a>
+              <Gestisci i={i} ricarica={ricarica} />
+            </div>)}</div></>}
+          <button class="btn larga" style="margin-top:14px" onClick={() => inImp.current?.click()}>+ Carica una pratica (ZIP)</button>
+        </>;
+      })()}
+      <button class="btn pic" style="margin-top:10px" onClick={() => inRip.current?.click()}>Ripristina da copie salvate…</button>
       <p class="piccolo tenue" style="margin-top:20px">I dati restano solo su questo dispositivo finché non li esporti. L'app non invia nulla in rete. <a href="#/informazioni">Informazioni e privacy</a></p>
     </div>
   </div>;
+}
+
+function Gestisci({ i, ricarica }: { i: RecIstanza; ricarica: () => void }) {
+  return <details class="gestisci"><summary>Ricomincia o elimina</summary>
+    <div class="riga" style="margin-top:6px">
+      <button class="btn pic" onClick={async () => { const n = await chiediRipartenza(i); if (n) vai('s', n); }}>Ricomincia da zero</button>
+      <button class="btn pic per" onClick={async () => { if (await chiediEliminazione(i)) ricarica(); }}>Elimina</button>
+    </div>
+  </details>;
 }
 
 export async function chiediEliminazione(i: RecIstanza): Promise<boolean> {
@@ -88,7 +109,7 @@ export async function chiediEliminazione(i: RecIstanza): Promise<boolean> {
   if (s.evidenzeNonEsportate) perdite.push(`${s.evidenzeNonEsportate} foto/file non esportati`);
   const rischio = perdite.length > 0 && s.avviato;
   const testo = rischio
-    ? `ATTENZIONE: su questo dispositivo ci sono ${perdite.join(' e ')}. Se elimini, quel lavoro è perso per sempre (resta solo ciò che hai già salvato con i checkpoint).\n\nSe vuoi tenerlo, annulla e fai prima Esporta → Checkpoint.`
+    ? `ATTENZIONE: su questo dispositivo ci sono ${perdite.join(' e ')}. Se elimini, quel lavoro è perso per sempre (resta solo ciò che hai già salvato con le copie).\n\nSe vuoi tenerlo, annulla e fai prima Menu › Salva copia.`
     : s.finaleEsportato
       ? 'Il pacchetto finale è stato esportato e confermato. Il sopralluogo sparisce da questo dispositivo; resta ciò che hai salvato.'
       : 'Il sopralluogo sparisce da questo dispositivo. Lo ZIP di andata resta dove l\'hai salvato e puoi reimportarlo quando vuoi.';

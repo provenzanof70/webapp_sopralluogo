@@ -21,7 +21,6 @@ export function EditorTabella({ ses, el, e }: { ses: Sessione; el: ElTabella; e?
   const largo = typeof matchMedia === 'function' && matchMedia('(min-width: 900px)').matches;
   if (el.solaLettura) return <Griglia ses={ses} el={el} e={e} righe={righe} onRiga={() => undefined} />;
   return <>
-    <p style="margin:6px 0;font-weight:600">{el.titolo}</p>
     {el.notaPiede && <p class="piccolo tenue">{el.notaPiede}</p>}
     {largo ? <Griglia ses={ses} el={el} e={e} righe={righe} onRiga={setRiga} /> : (
       <div class="card" style="padding:0">

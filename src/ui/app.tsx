@@ -6,6 +6,8 @@ import { Sopralluogo } from './sopralluogo';
 import { impostazione, db } from '../archivio/db';
 import { sha256 } from '../util/base';
 
+declare const __PROVA__: boolean;
+
 export function App({ aggiornamento }: { aggiornamento: { pronto: boolean; applica: () => void; ascolta: (f: () => void) => void } }) {
   const h = useHash();
   const [bloccata, setBloccata] = useState(false);
@@ -30,6 +32,7 @@ export function App({ aggiornamento }: { aggiornamento: { pronto: boolean; appli
   else if (h[0] === 'informazioni') pagina = <Informazioni />;
   else pagina = <Home />;
   return <>
+    {__PROVA__ && <div class="banner-prova">Versione di prova del nuovo flusso — i dati restano solo in questa pagina</div>}
     {agg && <BannerAggiornamento applica={aggiornamento.applica} />}
     {pagina}
     <OspiteModale />

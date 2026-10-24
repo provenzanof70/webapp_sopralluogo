@@ -4,7 +4,11 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
   base: './',
-  define: { __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')) },
+  define: {
+    __BUILD__: JSON.stringify(new Date().toISOString().slice(0, 16).replace('T', ' ')),
+    // build di prova (PROVA=1): nessun service worker, banner «versione di prova»
+    __PROVA__: JSON.stringify(process.env.PROVA === '1'),
+  },
   plugins: [
     preact(),
     VitePWA({

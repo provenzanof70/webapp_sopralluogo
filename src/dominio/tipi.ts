@@ -50,6 +50,8 @@ interface BaseElemento {
   ordine: number;
   priorita?: Priorita;
   titolo?: string;
+  /** dalla 1.1: oggetto o tema per raggruppare le voci dell'area */
+  componente?: string;
   rif?: string[];
   capitoloPdf?: string;
   riservato?: boolean;

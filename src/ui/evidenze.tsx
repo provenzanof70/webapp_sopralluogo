@@ -7,6 +7,7 @@ import { impostazione } from '../archivio/db';
 import { avvisa, prova, motivo, chiedi, conferma, messaggio } from './comuni';
 import { dataOra } from '../util/base';
 import { VisorePdf } from './pdf';
+import { titoloBreve } from './voci';
 
 const urlCache = new Map<string, string>();
 export function useUrlMiniatura(ses: Sessione, id: string) {
@@ -49,8 +50,8 @@ export async function acquisisciFile(ses: Sessione, f: File | Blob, o: { tipo: T
 }
 
 /** Pulsanti di acquisizione per un elemento (o per l'INBOX se elementi è vuoto). */
-export function Cattura({ ses, elementi, area, tipi = ['foto', 'galleria', 'file', 'audio', 'nota'], tipoFoto = 'foto' }: {
-  ses: Sessione; elementi: string[]; area?: string; tipi?: string[]; tipoFoto?: 'foto' | 'documento';
+export function Cattura({ ses, elementi, area, tipi = ['foto', 'galleria', 'file', 'audio', 'nota'], tipoFoto = 'foto', grande, etichetta }: {
+  ses: Sessione; elementi: string[]; area?: string; tipi?: string[]; tipoFoto?: 'foto' | 'documento'; grande?: boolean; etichetta?: string;
 }) {
   const cam = useRef<HTMLInputElement>(null);
   const gal = useRef<HTMLInputElement>(null);
@@ -69,19 +70,24 @@ export function Cattura({ ses, elementi, area, tipi = ['foto', 'galleria', 'file
     setOccupato(false);
     if (n) avvisa(n === 1 ? 'Salvato e verificato' : `${n} file salvati e verificati`);
   };
-  return (
-    <div class="gruppo-btn" style="margin-top:8px">
+  const inputs = <>
       <input ref={cam} type="file" accept="image/*" capture="environment" class="nascosto" onChange={(e) => { carica(e.currentTarget.files, 'fotocamera'); e.currentTarget.value = ''; }} />
       <input ref={gal} type="file" accept="image/*" multiple class="nascosto" onChange={(e) => { carica(e.currentTarget.files, 'galleria'); e.currentTarget.value = ''; }} />
       <input ref={fil} type="file" multiple class="nascosto" onChange={(e) => { carica(e.currentTarget.files, 'file'); e.currentTarget.value = ''; }} />
-      {tipi.includes('foto') && <button class="btn pic pri" disabled={occupato} onClick={() => cam.current?.click()}>📷 Scatta</button>}
-      {tipi.includes('galleria') && <button class="btn pic" disabled={occupato} onClick={() => gal.current?.click()}>🖼 Galleria</button>}
-      {tipi.includes('file') && <button class="btn pic" disabled={occupato} onClick={() => fil.current?.click()}>📄 File</button>}
-      {tipi.includes('audio') && <button class="btn pic" disabled={occupato} onClick={() => setReg(true)}>🎙 Audio</button>}
+  </>;
+  if (grande) return <>{inputs}<button class="btn foto-btn" disabled={occupato} onClick={() => cam.current?.click()}>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>{occupato ? 'Salvo…' : etichetta ?? 'Foto'}</button></>;
+  return (
+    <div class="gruppo-btn" style="margin-top:8px">
+      {inputs}
+      {tipi.includes('foto') && <button class="btn pic pri" disabled={occupato} onClick={() => cam.current?.click()}>{etichetta ?? 'Scatta una foto'}</button>}
+      {tipi.includes('galleria') && <button class="btn pic" disabled={occupato} onClick={() => gal.current?.click()}>Dalla galleria</button>}
+      {tipi.includes('file') && <button class="btn pic" disabled={occupato} onClick={() => fil.current?.click()}>Allega un file</button>}
+      {tipi.includes('audio') && <button class="btn pic" disabled={occupato} onClick={() => setReg(true)}>Registra audio</button>}
       {tipi.includes('nota') && <button class="btn pic" disabled={occupato} onClick={async () => {
         const r = await chiedi('Nota', [{ id: 't', etichetta: 'Testo (puoi dettare con il microfono della tastiera)', tipo: 'area', obbligatorio: true }]);
         if (r?.t?.trim()) await prova(() => ses.nota(r.t.trim(), elementi, area), 'Nota salvata');
-      }}>✎ Nota</button>}
+      }}>Scrivi una nota</button>}
       {occupato && <span class="tenue piccolo">Salvataggio e verifica…</span>}
       {reg && <Registratore onFine={async (b) => { setReg(false); if (b) { setOccupato(true); await acquisisciFile(ses, b, { tipo: 'audio', fonte: 'microfono', elementi, area, nome: `audio.${b.type.includes('mp4') ? 'm4a' : 'webm'}` }); setOccupato(false); avvisa('Audio salvato e verificato'); } }} />}
     </div>
@@ -173,20 +179,17 @@ export function Visore({ ses, id, onChiudi }: { ses: Sessione; id: string; onChi
         {url && e.tipo === 'audio' && <audio src={url} controls style="width:100%;margin:8px 0" />}
         {e.mime === 'application/pdf' && <PdfEvidenza ses={ses} id={id} titolo={e.file?.split('/').pop() ?? 'PDF'} />}
         {e.tipo === 'nota' && <p style="white-space:pre-wrap" class="atti">{e.testo}</p>}
-        <p class="piccolo tenue">{e.file}<br />Acquisita {dataOra(e.acquisitaIl)}{e.dataOriginaleExif ? ` · scatto ${e.dataOriginaleExif.replace('T', ' ')}` : ''}{e.gps ? ` · GPS ${e.gps.lat.toFixed(5)}, ${e.gps.lon.toFixed(5)} (${e.gps.fonte})` : ''}<br />Codici: {e.elementi.join(', ') || 'INBOX'}{e.sha256 ? <><br />SHA-256 {e.sha256}</> : null}</p>
+        <p class="piccolo tenue">{e.file}<br />Acquisita {dataOra(e.acquisitaIl)}{e.dataOriginaleExif ? ` · scatto ${e.dataOriginaleExif.replace('T', ' ')}` : ''}{e.gps ? ` · GPS ${e.gps.lat.toFixed(5)}, ${e.gps.lon.toFixed(5)} (${e.gps.fonte})` : ''}<br />Collegata a: {e.elementi.join(', ') || 'nessuna voce (foto da assegnare)'}{e.sha256 ? <><br />SHA-256 {e.sha256}</> : null}</p>
         <div class="gruppo-btn">
           <button class="btn pic" onClick={async () => {
             const r = await chiedi('Didascalia', [{ id: 'd', etichetta: 'Didascalia', tipo: 'area', valore: e.didascalia ?? '' }]);
             if (r) await prova(() => ses.registra('evidenza.aggiornata', null, { id, didascalia: r.d.trim() }), 'Didascalia salvata');
           }}>Didascalia</button>
           <button class="btn pic" onClick={async () => {
-            const r = await chiedi('Collega a codici', [{ id: 'c', etichetta: 'Codici separati da virgola (vuoto = INBOX)', valore: e.elementi.join(', ') }]);
-            if (!r) return;
-            const nuovi = r.c.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
-            const sconosciuti = nuovi.filter((c) => !ses.struttura.elementi.some((x) => x.id === c) && !ses.struttura.elementi.some((x) => x.tipo === 'tabella' && x.righe?.some((rr) => rr.id === c)));
-            if (sconosciuti.length && !(await conferma('Codici non presenti nella struttura', sconosciuti.join(', ') + '\nCollegare comunque?'))) return;
+            const nuovi = await scegliVoci(ses, e.area, e.elementi);
+            if (!nuovi) return;
             await prova(() => ses.registra('evidenza.aggiornata', null, { id, elementi: nuovi }), 'Collegamenti aggiornati');
-          }}>Collega</button>
+          }}>Collega a una voce</button>
           <button class="btn pic" onClick={() => prova(() => ses.registra('evidenza.aggiornata', null, { id, riservata: !e.riservata }), e.riservata ? 'Non più riservata' : 'Marcata riservata')}>{e.riservata ? 'Riservata ✓' : 'Riservata'}</button>
           {!e.annullata && <button class="btn pic per" onClick={async () => {
             const m = await motivo('Annulla evidenza', 'L\'evidenza non si cancella: resta nel pacchetto marcata come annullata.');
@@ -227,4 +230,19 @@ export async function consegnaFile(nome: string, blob: Blob, titolo: string): Pr
     ? 'Dove trovarlo: app «File» (o «I miei file») → cartella Download.\nPer metterlo su OneDrive: app OneDrive → cartella della pratica → «+» → Carica → Download → il file.'
     : 'Dove trovarlo: app «File» → Download (oppure la cartella download del browser).\nPoi spostalo nella cartella OneDrive della pratica.'}`);
   return true;
+}
+
+/** Scelta delle voci a cui collegare una o più evidenze: elenco delle voci dell'area (titoli brevi) o codici scritti a mano. */
+export async function scegliVoci(ses: Sessione, area: string | undefined, attuali: string[] = []): Promise<string[] | null> {
+  const voci = ses.struttura.elementi.filter((x) => (!area || x.area === area) && x.tipo !== 'informazione' && x.tipo !== 'uscitaArea').sort((a, b) => a.ordine - b.ordine);
+  const NESSUNA = '— scrivo io i codici —';
+  const r = await chiedi('Collega a una voce', [
+    { id: 'v', etichetta: area ? `Voce dell'area ${area}` : 'Voce', tipo: 'scelta', scelte: [NESSUNA, ...voci.map((x) => `${x.id} — ${titoloBreve(x)}`)], valore: attuali[0] ? voci.map((x) => `${x.id} — ${titoloBreve(x)}`).find((t) => t.startsWith(attuali[0] + ' ')) ?? NESSUNA : (voci[0] ? `${voci[0].id} — ${titoloBreve(voci[0])}` : NESSUNA) },
+    { id: 'c', etichetta: 'Oppure codici separati da virgola (vuoto = da assegnare)', valore: attuali.join(', ') },
+  ], { ok: 'Collega' });
+  if (!r) return null;
+  const nuovi = r.v && r.v !== NESSUNA ? [r.v.split(' — ')[0]] : r.c.split(/[,\s]+/).map((x) => x.trim()).filter(Boolean);
+  const sconosciuti = nuovi.filter((c) => !ses.struttura.elementi.some((x) => x.id === c) && !ses.struttura.elementi.some((x) => x.tipo === 'tabella' && x.righe?.some((rr) => rr.id === c)));
+  if (sconosciuti.length && !(await conferma('Codici non presenti nella struttura', sconosciuti.join(', ') + '\nCollegare comunque?'))) return null;
+  return nuovi;
 }
