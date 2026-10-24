@@ -13,6 +13,7 @@ import { VistaEsporta } from './esporta';
 import { impostazione } from '../archivio/db';
 import { db } from '../archivio/db';
 import { chiediEliminazione, chiediRipartenza } from './home';
+import { VisorePdf } from './pdf';
 import { isoLocale, soloOra, dataIt, numIt } from '../util/base';
 import { indiceElementi } from '../dominio/stato';
 
@@ -48,6 +49,7 @@ export function Sopralluogo({ id, percorso }: { id: string; percorso: string[] }
     case 'verbale': corpo = <VistaVerbale ses={ses} />; break;
     case 'esporta': corpo = <VistaEsporta ses={ses} />; break;
     case 'integrita': corpo = <Integrita ses={ses} />; break;
+    case 'pdf': corpo = <PdfCampo ses={ses} pagina={Number(percorso[1]) || 1} />; break;
     default: corpo = <Adesso ses={ses} />;
   }
   return <div class="app">
@@ -285,7 +287,7 @@ function Inbox({ ses }: { ses: Sessione }) {
 function Altro({ ses }: { ses: Sessione }) {
   const id = ses.istanza.id;
   const [pdf, setPdf] = useState<string | null>(null);
-  useEffect(() => { db().campo.get(id).then((c) => { if (c) setPdf(URL.createObjectURL(c.blob)); }); }, [id]);
+  useEffect(() => { db().campo.get(id).then((c) => { if (c) setPdf(c.nome); }); }, [id]);
   const voce = (h: string, t: string, d: string) => <a class="voce-lista" href={`#/s/${id}/${h}`} style="color:inherit;text-decoration:none;display:flex"><span class="cresce"><b>{t}</b><br /><small class="tenue">{d}</small></span>›</a>;
   return <>
     <h1>Altro</h1>
@@ -298,7 +300,7 @@ function Altro({ ses }: { ses: Sessione }) {
       {voce('esporta', 'Esporta', 'Checkpoint, pacchetto finale, report')}
       {voce('integrita', 'Verifica di integrità', 'Controlla registro e impronte sul dispositivo')}
     </div>
-    {pdf && <a class="btn larga" href={pdf} target="_blank" rel="noopener">Apri il PDF di campo</a>}
+    {pdf && <a class="btn larga" href={`#/s/${id}/pdf`}>Apri il PDF di campo</a>}
     <div class="card"><h3>Gestione del sopralluogo</h3>
       <p class="piccolo tenue">Ricominciare crea un sopralluogo vuoto dallo stesso ZIP di andata, senza riscegliere il file. Eliminare cancella questo sopralluogo dal dispositivo.</p>
       <div class="gruppo-btn">
@@ -402,6 +404,15 @@ function Contemporanee({ ses, gruppo }: { ses: Sessione; gruppo: string }) {
     })}
     <button class="btn ok larga" onClick={salva}>Salva tutte con l'ora comune</button>
   </>;
+}
+
+// ------------------------------------------------------------------ PDF di campo
+function PdfCampo({ ses, pagina }: { ses: Sessione; pagina: number }) {
+  const [c, setC] = useState<{ nome: string; blob: Blob } | null | undefined>(undefined);
+  useEffect(() => { db().campo.get(ses.istanza.id).then((x) => setC(x ? { nome: x.nome, blob: x.blob } : null)); }, [ses.istanza.id]);
+  if (c === undefined) return <p class="tenue">…</p>;
+  if (!c) return <p class="avviso">Questo sopralluogo non ha il PDF di campo (il pacchetto di andata non lo conteneva).</p>;
+  return <VisorePdf blob={c.blob} titolo={c.nome} paginaIniziale={pagina} onChiudi={() => history.back()} />;
 }
 
 // ------------------------------------------------------------------ integrità

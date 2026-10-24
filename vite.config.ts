@@ -29,7 +29,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ttf,png,svg,ico,webmanifest}'],
+        globPatterns: ['**/*.{js,mjs,css,html,ttf,png,svg,ico,webmanifest}'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         navigateFallback: 'index.html',
         cleanupOutdatedCaches: true,

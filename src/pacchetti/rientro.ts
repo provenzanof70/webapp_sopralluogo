@@ -8,7 +8,7 @@ import { validaManifestRientro } from '../dominio/validazione';
 import { sha256, utf8, isoLocale, fusoOrario, marcaFile } from '../util/base';
 import { scriviZip, type FileDaScrivere } from '../util/zip';
 
-export const VERSIONE_APP = '1.1.0';
+export const VERSIONE_APP = '1.2.0';
 declare const __BUILD__: string;
 export const BUILD_APP = typeof __BUILD__ !== 'undefined' ? __BUILD__ : 'sviluppo';
 export const VERSIONE_SCHEMA = '1.0.0';

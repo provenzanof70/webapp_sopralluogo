@@ -40,7 +40,7 @@ export function VistaArea({ ses, area, codice }: { ses: Sessione; area: string; 
   const i = aree.findIndex((x) => x.id === area);
   return <>
     <div class="card">
-      <div class="riga"><code><b>{a.id}</b></code>{a.capitoloPdf && <span class="tenue piccolo">cap. {a.capitoloPdf}</span>}<span class="cresce" />{(a.dalle || a.alle) && <span class="piccolo">{a.dalle}{a.alle ? `–${a.alle}` : ''}</span>}</div>
+      <div class="riga"><code><b>{a.id}</b></code>{a.capitoloPdf && <a class="tenue piccolo" href={`#/s/${ses.istanza.id}/pdf`}>cap. {a.capitoloPdf} · PDF</a>}<span class="cresce" />{(a.dalle || a.alle) && <span class="piccolo">{a.dalle}{a.alle ? `–${a.alle}` : ''}</span>}</div>
       <h2 style="margin:4px 0">{a.titolo}</h2>
       {a.accompagnatore && <p class="piccolo" style="margin:2px 0">Con: <b>{a.accompagnatore}</b></p>}
       {a.scopo && <p class="piccolo tenue" style="margin:2px 0">{a.scopo}</p>}

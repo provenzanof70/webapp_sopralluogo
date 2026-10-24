@@ -6,6 +6,7 @@ import { leggiExif, ridimensiona } from '../util/immagini';
 import { impostazione } from '../archivio/db';
 import { avvisa, prova, motivo, chiedi, conferma, messaggio } from './comuni';
 import { dataOra } from '../util/base';
+import { VisorePdf } from './pdf';
 
 const urlCache = new Map<string, string>();
 export function useUrlMiniatura(ses: Sessione, id: string) {
@@ -170,7 +171,7 @@ export function Visore({ ses, id, onChiudi }: { ses: Sessione; id: string; onChi
         {e.annullata && <p class="avviso">Annullata il {dataOra(e.annullata.il)}: {e.annullata.motivo}. Resta nel pacchetto.</p>}
         {url && e.tipo !== 'audio' && e.mime?.startsWith('image/') && <img src={url} style="width:100%;border-radius:8px;margin:8px 0" alt="" />}
         {url && e.tipo === 'audio' && <audio src={url} controls style="width:100%;margin:8px 0" />}
-        {url && e.mime === 'application/pdf' && <a class="btn" href={url} target="_blank" rel="noopener">Apri il PDF</a>}
+        {e.mime === 'application/pdf' && <PdfEvidenza ses={ses} id={id} titolo={e.file?.split('/').pop() ?? 'PDF'} />}
         {e.tipo === 'nota' && <p style="white-space:pre-wrap" class="atti">{e.testo}</p>}
         <p class="piccolo tenue">{e.file}<br />Acquisita {dataOra(e.acquisitaIl)}{e.dataOriginaleExif ? ` · scatto ${e.dataOriginaleExif.replace('T', ' ')}` : ''}{e.gps ? ` · GPS ${e.gps.lat.toFixed(5)}, ${e.gps.lon.toFixed(5)} (${e.gps.fonte})` : ''}<br />Codici: {e.elementi.join(', ') || 'INBOX'}{e.sha256 ? <><br />SHA-256 {e.sha256}</> : null}</p>
         <div class="gruppo-btn">
@@ -196,6 +197,14 @@ export function Visore({ ses, id, onChiudi }: { ses: Sessione; id: string; onChi
       </div>
     </div>
   );
+}
+
+function PdfEvidenza({ ses, id, titolo }: { ses: Sessione; id: string; titolo: string }) {
+  const [b, setB] = useState<Blob | null>(null);
+  const [aperto, setAperto] = useState(false);
+  useEffect(() => { ses.blobEvidenza(id).then((x) => setB(x ?? null)); }, [id]);
+  if (!b) return null;
+  return aperto ? <VisorePdf blob={b} titolo={titolo} onChiudi={() => setAperto(false)} /> : <button class="btn" onClick={() => setAperto(true)}>Apri il PDF</button>;
 }
 
 export async function consegnaFile(nome: string, blob: Blob, titolo: string): Promise<boolean> {
