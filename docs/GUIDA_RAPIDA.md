@@ -1,4 +1,4 @@
-# Guida rapida — app di sopralluogo (1.3)
+# Guida rapida — app di sopralluogo (1.4)
 
 ## Una volta sola
 1. Apri **https://provenzanof70.github.io/webapp_sopralluogo/**
@@ -24,6 +24,14 @@
 - Sulle verifiche con dato agli atti puoi premere **Confermo** direttamente nella riga.
 - **Avanti ›** porta alla voce successiva dell'area; alla fine propone di chiudere l'area.
 - **Letture contatori**: l'ora si fissa quando apri la schermata (tasto «Rimetti adesso»), scrivi i valori, **Salva … valori delle hh:mm**. Accanto a ogni valore salvato c'è l'ora.
+
+## Compilare sul PDF (Scheda PDF, dalla 1.4)
+- Menu › **Scheda PDF**, oppure nell'area **Compila sul PDF**, oppure «sul PDF» nel pannello di una voce.
+- Si vedono le pagine del PDF di campo, identiche. Ogni codice (V-…, Q…, F…, L…, righe di tabella, passi dei protocolli) è toccabile: si apre il pannello della voce (sul tablet a destra, sul telefono dal basso) con le stesse azioni di sempre, comprese foto, documenti e audio.
+- Quello che registri compare scritto in blu nelle celle del PDF (esito, risposta, valore e ora delle letture, celle delle tabelle, ora effettiva dei passi); il pallino accanto al codice è verde se la voce è fatta, arancione se è in parte, viola se non fattibile oggi.
+- **Avanti ›** segue l'ordine del PDF. Con − e + si ingrandisce; sul telefono si scorre anche di lato.
+- **PDF compilato**: scarica il PDF di campo con sopra tutto ciò che è stato registrato. È incluso anche nella copia finale (report/scheda_pdf_compilata.pdf).
+- Funziona con i PDF prodotti dalla skill (codici stampati a inizio riga). Con PDF vecchi senza codici delle verifiche, quelle righe non sono toccabili: si compilano dalla vista Aree.
 
 ## Chiudere un'area
 - **Chiudi l'area**: le voci importanti rimaste sono già spuntate come «non fattibili oggi» con **un solo motivo** per tutte (con suggerimenti). Togli la spunta a quelle che vuoi ancora fare.

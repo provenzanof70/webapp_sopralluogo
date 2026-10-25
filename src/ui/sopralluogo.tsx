@@ -9,6 +9,7 @@ import { Cattura, Miniature, acquisisciFile, scegliVoci } from './evidenze';
 import { elementoAperto } from './editori';
 import { Icona, titoloBreve, sequenzaArea, RigaVoce } from './voci';
 import { FineSopralluogo } from './fine';
+import { SchedaPdf } from './scheda';
 import { ElencoFigure, VistaFigura } from './figure';
 import { VistaVerbale } from './verbale';
 import { VistaEsporta } from './esporta';
@@ -40,6 +41,7 @@ export function Sopralluogo({ id, percorso }: { id: string; percorso: string[] }
     if (vista === 'a' && percorso[2]) return vai('s', id, 'a', percorso[1]);
     if (vista === 'a' || vista === 'chiudi') return vai('s', id, vista === 'chiudi' ? 'a' : 'giro', ...(vista === 'chiudi' ? [percorso[1]] : []));
     if (vista === 'figura') return vai('s', id, 'figure');
+    if (vista === 'scheda') return percorso[1] ? vai('s', id, 'scheda') : vai('s', id, 'giro');
     if (PRINCIPALI.includes(vista)) return vai('');
     return vai('s', id, 'altro');
   };
@@ -63,6 +65,7 @@ export function Sopralluogo({ id, percorso }: { id: string; percorso: string[] }
     case 'esporta': corpo = <VistaEsporta ses={ses} />; break;
     case 'integrita': corpo = <Integrita ses={ses} />; break;
     case 'pdf': corpo = <PdfCampo ses={ses} pagina={Number(percorso[1]) || 1} />; break;
+    case 'scheda': corpo = <SchedaPdf ses={ses} codice={percorso[1]} />; break;
     default: corpo = <Adesso ses={ses} />;
   }
   const p = ses.struttura.pratica;
@@ -91,7 +94,7 @@ export function Sopralluogo({ id, percorso }: { id: string; percorso: string[] }
 }
 
 const PRINCIPALI = ['adesso', 'giro', 'manca', 'altro'];
-const TAB_DI: Record<string, string> = { adesso: 'adesso', preparazione: 'adesso', contemporanee: 'adesso', fine: 'adesso', presenti: 'adesso', giro: 'giro', a: 'giro', chiudi: 'giro', manca: 'manca', inbox: 'altro', altro: 'altro' };
+const TAB_DI: Record<string, string> = { adesso: 'adesso', preparazione: 'adesso', contemporanee: 'adesso', fine: 'adesso', presenti: 'adesso', giro: 'giro', a: 'giro', chiudi: 'giro', manca: 'manca', inbox: 'altro', altro: 'altro', scheda: 'giro' };
 const GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
 function giornoBreve(d: string) { const x = new Date(d + 'T12:00:00'); return Number.isNaN(x.getTime()) ? d : `${GIORNI[x.getDay()]} ${d.slice(8, 10)}/${d.slice(5, 7)}`; }
 
@@ -356,6 +359,7 @@ function Altro({ ses }: { ses: Sessione }) {
     <div class="card" style="padding:0">
       {voce('preparazione', 'Prima di partire', 'Checklist, strumenti, regole di campo')}
       {voce('presenti', 'Presenti e consensi', 'Chi c\'è, consenso a foto e audio')}
+      {ses.struttura.generazione.pdfCampo && voce('scheda', 'Scheda PDF', 'Compila direttamente sulle pagine del PDF di campo')}
       {gruppi.map((g) => voce(`contemporanee/${encodeURIComponent(g)}`, gruppi.length > 1 ? `Letture contatori «${g}»` : 'Letture contatori', 'Tutte allo stesso minuto, arrivo e partenza'))}
       {voce('documenti', 'Documenti', 'Da ritirare o farsi promettere')}
       {voce('inbox', 'Foto da assegnare', 'Foto e note non ancora collegate a una voce', nInbox)}

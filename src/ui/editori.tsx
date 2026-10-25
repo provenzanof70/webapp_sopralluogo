@@ -32,14 +32,17 @@ let apertoOra: string | null = null;
 export function elementoAperto() { return apertoOra; }
 
 /** Pannello di una voce: titolo breve, testo, azioni principali, «Altre azioni», navigazione Prec./Avanti. */
-export function Pannello({ ses, el, inline, onChiudi }: { ses: Sessione; el: Elemento; inline?: boolean; onChiudi: () => void }) {
+export function Pannello({ ses, el, inline, onChiudi, sequenza, onVai, fine }: {
+  ses: Sessione; el: Elemento; inline?: boolean; onChiudi: () => void;
+  /** navigazione alternativa (es. ordine del PDF di campo) */ sequenza?: Elemento[]; onVai?: (x: Elemento) => void; fine?: { etichetta: string; azione: () => void };
+}) {
   const e = ses.stato.esiti[el.id];
-  const seq = sequenzaArea(ses, el.area);
+  const seq = sequenza ?? sequenzaArea(ses, el.area);
   const i = seq.findIndex((x) => x.id === el.id);
   const prec = i > 0 ? seq[i - 1] : undefined;
   const succ = i >= 0 && i < seq.length - 1 ? seq[i + 1] : undefined;
-  const vaiA = (x: Elemento) => vai('s', ses.istanza.id, 'a', x.area, x.id);
-  const avanti = () => (succ ? vaiA(succ) : vai('s', ses.istanza.id, 'chiudi', el.area));
+  const vaiA = (x: Elemento) => (onVai ? onVai(x) : vai('s', ses.istanza.id, 'a', x.area, x.id));
+  const avanti = () => (succ ? vaiA(succ) : fine ? fine.azione() : vai('s', ses.istanza.id, 'chiudi', el.area));
   useEffect(() => { apertoOra = el.id; return () => { apertoOra = null; }; }, [el.id]);
   const desc = descrizione(el);
   const corpo = useRef<HTMLDivElement>(null);
@@ -51,6 +54,7 @@ export function Pannello({ ses, el, inline, onChiudi }: { ses: Sessione; el: Ele
       <span class="tenue piccolo">{NOMI_TIPO[el.tipo]}{el.riservato ? ' · riservato' : ''}</span>
       <code class="pn-cod">{el.id}</code>
       <span class="cresce" />
+      {!sequenza && ses.struttura.generazione.pdfCampo && <a class="pn-pdf" href={`#/s/${ses.istanza.id}/scheda/${encodeURIComponent(el.id)}`}>sul PDF</a>}
       {!inline && <button class="pn-x" aria-label="Chiudi" onClick={onChiudi}><Icona n="chiudi" /></button>}
     </div>
     <div class="pn-corpo" ref={corpo}>
@@ -61,7 +65,7 @@ export function Pannello({ ses, el, inline, onChiudi }: { ses: Sessione; el: Ele
     </div>
     <div class="pn-piede">
       <button class="btn" disabled={!prec} onClick={() => prec && vaiA(prec)}><Icona n="indietro" d={18} /> Prec.</button>
-      <button class="btn pri cresce" onClick={avanti}>{succ ? <>Avanti: <span class="ellissi">{titoloBreve(succ)}</span></> : 'Fine area: chiudila'} <Icona n="avanti" d={18} /></button>
+      <button class="btn pri cresce" onClick={avanti}>{succ ? <>Avanti: <span class="ellissi">{titoloBreve(succ)}</span></> : fine ? fine.etichetta : 'Fine area: chiudila'} <Icona n="avanti" d={18} /></button>
     </div>
   </section>;
 }

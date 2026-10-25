@@ -329,6 +329,13 @@ export async function generaTuttiIReport(ses: Sessione, opz: OpzioniReport = {},
   out.push({ nome: 'report/report_dettagliato.html', dati: await generaDettagliato(ses, opz), tipo: 'reportDettagliato' });
   out.push({ nome: 'report/report_sintetico_cliente.pdf', dati: await generaSintetico(ses, opz), tipo: 'reportSintetico' });
   out.push({ nome: 'report/fascicolo_fotografico.pdf', dati: await generaFascicolo(ses, opz), tipo: 'fascicoloFotografico' });
+  if (ses.struttura.generazione.pdfCampo) {
+    try {
+      const { generaSchedaCompilata } = await import('./schedaCompilata');
+      const b = await generaSchedaCompilata(ses);
+      if (b) out.push({ nome: 'report/scheda_pdf_compilata.pdf', dati: b, tipo: 'schedaCompilata' });
+    } catch (e) { console.warn('Scheda compilata non generata', e); }
+  }
   return out;
 }
 

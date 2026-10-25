@@ -15,6 +15,7 @@ let caricatore: CaricatoreFont = async () => {
 export function impostaCaricatoreFont(f: CaricatoreFont) { caricatore = f; }
 
 let cacheFont: { normale: Uint8Array; grassetto: Uint8Array } | null = null;
+export async function caricaFont() { if (!cacheFont) cacheFont = await caricatore(); return cacheFont; }
 
 export const GRIGIO = rgb(0.42, 0.45, 0.5);
 export const NERO = rgb(0.08, 0.1, 0.13);

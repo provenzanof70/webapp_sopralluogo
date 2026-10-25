@@ -8,6 +8,7 @@ import { Pannello, suggerisciCheckpoint } from './editori';
 import { vai, prova, avvisa, Badge } from './comuni';
 import { RigaVoce, gruppiArea, titoloBreve, Icona } from './voci';
 import { soloOra } from '../util/base';
+import { LinkScheda } from './scheda';
 
 export function useLargo(min = 900) {
   const mq = typeof matchMedia === 'function' ? matchMedia(`(min-width: ${min}px)`) : null;
@@ -55,9 +56,10 @@ export function VistaArea({ ses, area, codice }: { ses: Sessione; area: string; 
       <h1 class="area-tit">{a.titolo}</h1>
       <div class="piccolo tenue">{[a.accompagnatore && `con ${a.accompagnatore}`, (a.dalle || a.alle) && `${a.dalle ?? ''}${a.alle ? '–' + a.alle : ''}`, `${av.tutti.fatti} di ${av.tutti.tot} fatte`].filter(Boolean).join(' · ')}</div>
       {chiusa && <p class="okbox piccolo">Area chiusa alle {soloOra(chiusa.il)}{chiusa.conDeroga ? ', con voci non fattibili oggi' : ''}. <button class="btn pic" onClick={() => prova(() => ses.registra('area.riaperta', null, { area }), 'Area riaperta')}>Riapri</button></p>}
-      {(a.figure?.length || a.capitoloPdf) && <div class="gruppo-btn" style="margin-top:6px">
+      {(a.figure?.length || a.capitoloPdf || ses.struttura.generazione.pdfCampo) && <div class="gruppo-btn" style="margin-top:6px">
         {(a.figure ?? []).map((f) => <a class="btn pic" href={`#/s/${id}/figura/${f}`}>Planimetria {f}</a>)}
         {a.capitoloPdf && <a class="btn pic" href={`#/s/${id}/pdf`}>PDF cap. {a.capitoloPdf}</a>}
+        {voci[0] && <LinkScheda ses={ses} codice={voci[0].id} etichetta="Compila sul PDF" />}
       </div>}
     </div>
     {(a.scopo || info.length > 0) && <details class="info-area"><summary>Da sapere su quest'area</summary>

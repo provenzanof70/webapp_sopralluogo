@@ -157,7 +157,7 @@
         "type": "object", "required": ["file", "tipo", "sha256"], "additionalProperties": false,
         "properties": {
           "file": { "type": "string" },
-          "tipo": { "enum": ["verbale", "reportDettagliato", "reportSintetico", "fascicoloFotografico", "tabellaCsv", "figuraAnnotata"] },
+          "tipo": { "enum": ["verbale", "reportDettagliato", "reportSintetico", "fascicoloFotografico", "tabellaCsv", "figuraAnnotata", "schedaCompilata"], "description": "schedaCompilata (app 1.4): il PDF di campo con sopra quanto registrato" },
           "sha256": { "$ref": "#/$defs/sha256" },
           "elemento": { "type": "string" }
         }
