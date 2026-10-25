@@ -154,11 +154,27 @@ function Mini({ ses, e, onApri }: { ses: Sessione; e: Evidenza; onApri: () => vo
   const u = useUrlMiniatura(ses, e.id);
   const et = e.tipo === 'nota' ? '✎ nota' : e.tipo === 'audio' ? '🎙 audio' : e.tipo === 'documento' && !u ? '📄 doc' : e.tipo;
   return (
-    <button class={`m ${e.annullata ? 'ann' : ''}`} style="background:none;border:0;padding:0;text-align:left" onClick={onApri}>
-      {u ? <img src={u} alt="" /> : <div class="ph">{et}</div>}
-      <small>{e.file ? e.file.split('_').slice(-2).join('_') : e.testo?.slice(0, 20)}</small>
-    </button>
+    <div class={`m ${e.annullata ? 'ann' : ''}`}>
+      <button style="background:none;border:0;padding:0;text-align:left;display:block" onClick={onApri} aria-label="Apri">
+        {u ? <img src={u} alt="" /> : <div class="ph">{et}</div>}
+        <small>{e.file ? e.file.split('_').slice(-2).join('_') : e.testo?.slice(0, 20)}</small>
+      </button>
+      {ses.puoEliminare(e.id) && <button class="mini-x" aria-label="Elimina" onClick={() => chiediEliminazioneEvidenza(ses, e.id)}>×</button>}
+    </div>
   );
+}
+
+const NOMI_EV: Record<string, string> = { foto: 'la foto', audio: 'l\'audio', documento: 'il documento', nota: 'la nota', annotazione: 'l\'annotazione', firma: 'la firma' };
+
+/** Elimina davvero un'evidenza non ancora salvata, dopo conferma esplicita. */
+export async function chiediEliminazioneEvidenza(ses: Sessione, id: string): Promise<boolean> {
+  const e = ses.stato.evidenze[id];
+  if (!e) return false;
+  const cosa = NOMI_EV[e.tipo] ?? 'l\'evidenza';
+  const ok = await conferma(`Eliminare ${cosa}?`, `Sei sicuro? ${cosa.replace(/^./, (c) => c.toUpperCase())} delle ${dataOra(e.acquisitaIl).slice(-5)} viene cancellat${cosa.startsWith('la') ? 'a' : 'o'} da questo dispositivo e non si può recuperare. Nel registro resta solo l'annotazione dell'eliminazione.`, { ok: 'Sì, elimina', annulla: 'No, tienila', pericolo: true });
+  if (!ok) return false;
+  const r = await prova(async () => { await ses.eliminaEvidenza(id); return true; }, `${cosa.replace(/^./, (c) => c.toUpperCase())} eliminat${cosa.startsWith('la') ? 'a' : 'o'}`);
+  return r === true;
 }
 
 export function Visore({ ses, id, onChiudi }: { ses: Sessione; id: string; onChiudi: () => void }) {
@@ -191,10 +207,11 @@ export function Visore({ ses, id, onChiudi }: { ses: Sessione; id: string; onChi
             await prova(() => ses.registra('evidenza.aggiornata', null, { id, elementi: nuovi }), 'Collegamenti aggiornati');
           }}>Collega a una voce</button>
           <button class="btn pic" onClick={() => prova(() => ses.registra('evidenza.aggiornata', null, { id, riservata: !e.riservata }), e.riservata ? 'Non più riservata' : 'Marcata riservata')}>{e.riservata ? 'Riservata ✓' : 'Riservata'}</button>
-          {!e.annullata && <button class="btn pic per" onClick={async () => {
-            const m = await motivo('Annulla evidenza', 'L\'evidenza non si cancella: resta nel pacchetto marcata come annullata.');
-            if (m) { await prova(() => ses.registra('evidenza.annullata', null, { id, motivo: m }), 'Annullata'); onChiudi(); }
-          }}>Annulla</button>}
+          {ses.puoEliminare(id) ? <button class="btn pic per" onClick={async () => { if (await chiediEliminazioneEvidenza(ses, id)) onChiudi(); }}>Elimina</button>
+            : !e.annullata && e.tipo !== 'firma' && <button class="btn pic per" onClick={async () => {
+              const m = await motivo('Annulla evidenza', 'È già in una copia salvata: non si cancella, resta nel pacchetto marcata come annullata.');
+              if (m) { await prova(() => ses.registra('evidenza.annullata', null, { id, motivo: m }), 'Annullata'); onChiudi(); }
+            }}>Annulla</button>}
           {url && <a class="btn pic" href={url} download={e.file?.split('/').pop()}>Scarica</a>}
         </div>
       </div>

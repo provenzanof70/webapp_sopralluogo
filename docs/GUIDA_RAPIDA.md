@@ -49,7 +49,8 @@
 
 ## Ricominciare o eliminare
 - Nell'elenco iniziale («Ricomincia o elimina») o in Menu: **Ricomincia da zero** crea un sopralluogo vuoto dallo stesso ZIP; **Elimina** chiede il codice pratica e avvisa se ci sono dati non salvati.
-- Niente si cancella dentro un sopralluogo: «Annulla» lascia l'evidenza nel pacchetto con il motivo.
+- **Eliminare una foto** (o audio, documento, nota) appena fatta: la × rossa sulla miniatura, oppure apri la foto → «Elimina». L'app chiede conferma; il file sparisce dal dispositivo e nel registro resta solo l'annotazione dell'eliminazione.
+- Una foto già finita in una copia salvata non si elimina più: si può solo «Annullare» (resta nel pacchetto marcata come annullata, con il motivo). Le firme non si eliminano.
 
 ## Parole cambiate rispetto alla 1.2
 INBOX → **Foto da assegnare** · deroga → **Non fattibile oggi** · checkpoint → **Salva copia** · pacchetto finale → **Copia finale sigillata** · letture contemporanee → **Letture contatori** · Giro → **Aree** · Cosa manca → **Da fare** · Altro → **Menu**.

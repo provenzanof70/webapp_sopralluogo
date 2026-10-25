@@ -50,6 +50,23 @@ export class Sessione {
     return p;
   }
 
+  /** Si può eliminare davvero solo ciò che non è mai finito in una copia confermata (e non le firme). */
+  puoEliminare(id: string): boolean {
+    const e = this.stato.evidenze[id];
+    return !!e && e.tipo !== 'firma' && !e.annullata && !this.stato.evidenzeEsportate[id] && this.stato.statoSopralluogo !== 'chiuso';
+  }
+
+  async eliminaEvidenza(id: string): Promise<void> {
+    if (!this.puoEliminare(id)) throw new Error('Questa evidenza è già in una copia salvata (o è una firma): si può solo annullare.');
+    const e = this.stato.evidenze[id];
+    await this.esegui(() => ({ eventi: [{ tipo: 'evidenza.eliminata', codice: null, dati: { id, file: e.file ?? null, sha256: e.sha256 ?? null } }] }));
+    const d = db();
+    await d.transaction('rw', [d.blob, d.miniature], async () => {
+      await d.blob.delete([this.istanza.id, id]);
+      await d.miniature.delete([this.istanza.id, id]);
+    });
+  }
+
   registra(tipo: string, codice: string | null, dati: Record<string, unknown> = {}): Promise<Evento[]> {
     return this.esegui(() => ({ eventi: [{ tipo, codice, dati }] }));
   }

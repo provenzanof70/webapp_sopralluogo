@@ -189,6 +189,21 @@ export function applica(st: Stato, s: Struttura, ev: Evento): void {
       aggiornaCollegamenti(st, s, e, prima, il);
       return;
     }
+    case 'evidenza.eliminata': {
+      // eliminazione vera (solo evidenze mai salvate in una copia confermata): l'acquisizione resta nel registro
+      const e = st.evidenze[d.id];
+      if (!e) return;
+      const prima = [...e.elementi];
+      e.elementi = [];
+      aggiornaCollegamenti(st, s, e, prima, il);
+      for (const es of Object.values(st.esiti)) {
+        if (es.evidenze?.includes(d.id)) es.evidenze = es.evidenze.filter((x) => x !== d.id);
+        for (const r of Object.values(es.celle ?? {})) for (const c of Object.values(r)) if (c.evidenze?.includes(d.id)) c.evidenze = c.evidenze.filter((x) => x !== d.id);
+      }
+      delete st.evidenze[d.id];
+      delete st.evidenzeEsportate[d.id];
+      return;
+    }
     case 'evidenza.annullata': {
       const e = st.evidenze[d.id];
       if (!e) return;
